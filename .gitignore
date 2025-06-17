@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+.venv/
+
+# Streamlit / data
+working/
+final_upload.zip
+zones_for_edit.zip
