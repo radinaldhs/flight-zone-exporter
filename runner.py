@@ -131,7 +131,24 @@ def process_pipeline(merged):
     # export final shapefile
     gdf = merged_filt.merge(df1, on='Name', how='left')
     final_shp = OUT_DIR / f"{OUT_SPK}.shp"
-    gdf.to_file(final_shp, driver='ESRI Shapefile')
+
+
+    export_cols = [
+    "Name",
+    "Flight_Controller_ID",
+    "Height",
+    "Task_Flight_Speed",
+    "Task_Area",
+    "TaskAmount",
+    "StarFlight",
+    "EndFlight",
+    "Capacity",
+    "SPKNumber",
+    "KeyID",
+    "geometry",
+    ]
+    gdf = gdf[export_cols]
+    gdf.to_file(final_shp, driver="ESRI Shapefile")
     # write CPG
     with open(OUT_DIR / f"{OUT_SPK}.cpg", 'w', encoding='utf-8') as f:
         f.write('UTF-8')
@@ -144,6 +161,7 @@ def process_pipeline(merged):
             p = final_shp.with_suffix(f'.{ext}')
             if p.exists():
                 zout.write(p, p.name)
+    st.write("▶︎ Columns in the final GDF:", gdf.columns.tolist())
     st.success("✅ Final ZIP ready for download.")
     st.download_button(
         "Download Final Upload ZIP",
