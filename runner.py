@@ -144,8 +144,7 @@ def process_pipeline(merged):
     "EndFlight",
     "Capacity",
     "SPKNumber",
-    "KeyID",
-    "geometry",
+    "KeyID"
     ]
     gdf = gdf[export_cols]
     gdf.to_file(final_shp, driver="ESRI Shapefile")
