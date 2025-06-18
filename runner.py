@@ -51,6 +51,7 @@ def parse_kmls(folder: Path) -> gpd.GeoDataFrame:
             records.append({
                 'Name': name,
                 'Flight_Controller_ID': data.get('Flight Controller ID',''),
+                'Height': to_f(data.get('Height')),
                 'Task_Flight_Speed': to_f(data.get('Task Flight Speed')),
                 'Task_Area': to_f(data.get('Task Area')),
                 'geometry': LineString(coords)
