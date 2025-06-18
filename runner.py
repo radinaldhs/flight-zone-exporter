@@ -164,7 +164,10 @@ def process_pipeline(merged):
     st.write("▶︎ Columns in the final GDF:", gdf.columns.tolist())
     # --- Display final output as a table ---
     st.write("**Final Export Data:**")
-    st.dataframe(gdf[['Name', 'Task_Area', 'TaskAmount', 'StarFlight', 'EndFlight', 'Capacity', 'SPKNumber', 'KeyID']])
+    # display all columns except geometry
+    gdf_display = gdf.drop(columns='geometry')
+    st.dataframe(gdf_display, use_container_width=True)
+    # --- Display final shapefile download link ---
     # --- Provide download link for final ZIP ---
     st.success("✅ Final ZIP ready for download.")
     st.download_button(
@@ -172,6 +175,7 @@ def process_pipeline(merged):
         data=open(ZIP_OUT,'rb').read(),
         file_name=ZIP_OUT.name
     )
+
 
 # --- Execute pipeline based on user action ---
 if edited_zip:
