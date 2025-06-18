@@ -162,6 +162,10 @@ def process_pipeline(merged):
             if p.exists():
                 zout.write(p, p.name)
     st.write("▶︎ Columns in the final GDF:", gdf.columns.tolist())
+    # --- Display final output as a table ---
+    st.write("**Final Export Data:**")
+    st.dataframe(gdf[['Name', 'Task_Area', 'TaskAmount', 'StarFlight', 'EndFlight', 'Capacity', 'SPKNumber', 'KeyID']])
+    # --- Provide download link for final ZIP ---
     st.success("✅ Final ZIP ready for download.")
     st.download_button(
         "Download Final Upload ZIP",
