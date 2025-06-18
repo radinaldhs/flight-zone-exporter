@@ -164,10 +164,7 @@ def process_pipeline(merged):
     st.write("▶︎ Columns in the final GDF:", gdf.columns.tolist())
     # --- Display final output as a table ---
     st.write("**Final Export Data:**")
-    # display all columns except geometry
-    gdf_display = gdf.drop(columns='geometry')
-    st.dataframe(gdf_display, use_container_width=True)
-    # --- Display final shapefile download link ---
+    st.dataframe(gdf[['Name', 'Flight_Controller_ID', 'Height', 'Task_Flight_Speed', 'Task_Area', 'TaskAmount', 'StarFlight', 'EndFlight', 'Capacity', 'SPKNumber', 'KeyID']].head(10))
     # --- Provide download link for final ZIP ---
     st.success("✅ Final ZIP ready for download.")
     st.download_button(
