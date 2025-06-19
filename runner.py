@@ -27,7 +27,7 @@ if EDIT_ZIP.exists():
     EDIT_ZIP.unlink()
 
 if st.sidebar.button("🔄 Reset all"):
-    st.experimental_rerun()
+    st.session_state.clear()
 
 # --- Sidebar Inputs ---
 st.sidebar.header("Upload & Settings")
