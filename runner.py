@@ -18,20 +18,20 @@ if WORK_DIR.exists():
     shutil.rmtree(WORK_DIR)
 WORK_DIR.mkdir()
 
-FINAL_ZIP = Path("final_upload.zip")
-if FINAL_ZIP.exists():
-    FINAL_ZIP.unlink()
-
-EDIT_ZIP = Path(f"zones_for_edit_{OUT_SPK}.zip")
-if EDIT_ZIP.exists():
-    EDIT_ZIP.unlink()
-
 # --- Sidebar Inputs ---
 st.sidebar.header("Upload & Settings")
 zip_file = st.sidebar.file_uploader("1. Upload KML ZIP", type="zip")
 excel_file = st.sidebar.file_uploader("2. Upload Excel", type=["xlsx","xlsm","xls"])
 OUT_SPK = st.sidebar.text_input("3. SPK number")
 OUT_KEYID = st.sidebar.text_input("4. KeyID")
+
+FINAL_ZIP = Path(f"final_upload_{OUT_SPK}.zip")
+if FINAL_ZIP.exists():
+    FINAL_ZIP.unlink()
+
+EDIT_ZIP = Path(f"zones_for_edit_{OUT_SPK}.zip")
+if EDIT_ZIP.exists():
+    EDIT_ZIP.unlink()
 
 # --- Utility: Parse and merge KML layers ---
 def parse_kmls(folder: Path) -> gpd.GeoDataFrame:
