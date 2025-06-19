@@ -40,24 +40,27 @@ def parse_kmls(folder: Path) -> gpd.GeoDataFrame:
         root = ET.parse(kml).getroot()
         for pm in root.findall('.//Placemark'):
             name = pm.findtext('name')
-            data = {d.attrib['name']: d.findtext('value') for d in pm.findall('.//Data')}
-            def to_f(val):
-                try:
-                    return float(val)
-                except:
-                    return 0.0
-            coords = [tuple(map(float, pt.split(',')[:2]))
-                      for pt in pm.findtext('.//coordinates','').split()]
-            records.append({
-                'Name': name,
-                'Flight_Controller_ID': data.get('Flight Controller ID',''),
-                'Height': to_f(data.get('Height')),
-                'Route_Spacing': to_f(data.get('Route Spacing')),
-                'Task_Flight_Speed': to_f(data.get('Task Flight Speed')),
-                'Task_Area': to_f(data.get('Task Area')),
-                'geometry': LineString(coords)
-            })
-    return gpd.GeoDataFrame(records, crs='EPSG:4326')
+            # build a dict of *all* Data tags, replacing spaces with underscores
+            props = {
+                d.attrib['name'].replace(' ', '_'): d.findtext('value')
+                for d in pm.findall('.//Data')
+            }
+            # parse coords as before
+            coords = [
+                tuple(map(float, pt.split(',')[:2]))
+                for pt in pm.findtext('.//coordinates','').split()
+            ]
+            rec = {'Name': name, 'geometry': LineString(coords)}
+            rec.update(props)
+            records.append(rec)
+
+    gdf = gpd.GeoDataFrame(records, crs='EPSG:4326')
+    # try to coerce numeric columns
+    for c in gdf.columns:
+        if c != 'geometry':
+            gdf[c] = pd.to_numeric(gdf[c], errors='ignore')
+    return gdf
+
 
 # --- Step 5: Generate Shapefile ZIP for QGIS editing ---
 if st.sidebar.button("5. Generate & Download Shapefile ZIP for QGIS Edit"):
@@ -131,23 +134,29 @@ def process_pipeline(merged):
         df1.to_excel(w, sheet_name='Sheet1', index=False)
     # export final shapefile
     gdf = merged_filt.merge(df1, on='Name', how='left')
+
+    # ── fill Height and Route_Spacing nulls with last known value (and if first row is null, with the next)
+    for _col in ('Height', 'Route_Spacing'):
+        if _col in gdf.columns:
+            gdf[_col] = gdf[_col].ffill().bfill()
+
     final_shp = OUT_DIR / f"{OUT_SPK}.shp"
 
-    # rename the _in-memory_ columns to their 10-char versions
-    gdf = gdf.rename(columns={
-        'Flight_Controller_ID': 'Flight_Con',
-        'Task_Flight_Speed':    'Task_Fligh',
-        'Route_Spacing':        'Route_Spac',
-    })
+    truncate = {
+        col: col[:10]
+        for col in gdf.columns
+        if col != 'geometry'
+    }
+    # rename your in-memory columns
+    gdf = gdf.rename(columns=truncate)
 
-    export_cols = [
-        'Name','Flight_Con','Height', 'Route_Spac', 'Task_Fligh',
-        'Task_Area','TaskAmount','StarFlight','EndFlight',
-        'Capacity','SPKNumber','KeyID','geometry'
-    ]
-    gdf = gdf[export_cols]
+    # reorder so geometry is last
+    final_cols = list(truncate.values()) + ['geometry']
+    gdf = gdf[final_cols]
 
+    # now write—your in-memory names exactly match the on-disk shapefile fields
     gdf.to_file(final_shp, driver="ESRI Shapefile")
+
     # write CPG
     with open(OUT_DIR / f"{OUT_SPK}.cpg", 'w', encoding='utf-8') as f:
         f.write('UTF-8')
@@ -161,9 +170,8 @@ def process_pipeline(merged):
             if p.exists():
                 zout.write(p, p.name)
     st.write("▶︎ Columns in the final GDF:", gdf.columns.tolist())
-    # --- Display final output as a table ---
     st.write("**Final Export Data:**")
-    st.dataframe(gdf[['Name', 'Flight_Con', 'Height', 'Route_Spac', 'Task_Fligh', 'Task_Area', 'TaskAmount', 'StarFlight', 'EndFlight', 'Capacity', 'SPKNumber', 'KeyID']].head(10))
+    st.dataframe(gdf.drop(columns="geometry").head(10))
     # --- Provide download link for final ZIP ---
     st.success("✅ Final ZIP ready for download.")
     st.download_button(
