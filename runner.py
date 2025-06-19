@@ -131,35 +131,21 @@ def process_pipeline(merged: gpd.GeoDataFrame):
     # 🔍 inspect actual columns (debug)
     st.write("🔍 Raw shapefile columns:", gdf.columns.tolist())
 
-    # 5) build a rename map for the 10-char truncated fields:
-    cols = gdf.columns.tolist()
-    rename_map = {}
-    # detect laundered Flight_Controller_ID → startswith flight_con
-    fc_key = next((c for c in cols if c.lower().startswith("flight_con")), None)
-    if fc_key: rename_map[fc_key] = "FC_ID"
-    # detect laundered Task_Flight_Speed → startswith task_fligh
-    tf_key = next((c for c in cols if c.lower().startswith("task_fligh")), None)
-    if tf_key: rename_map[tf_key] = "TFSPEED"
-
-    # the rest all < 10 chars originally, so safe:
-    rename_map.update({
-        "Height":               "HEIGHT",
-        "Task_Area":            "TASKAREA",
-        "TaskAmount":           "TAMOUNT",
-        "StarFlight":           "SFLIGHT",
-        "EndFlight":            "EFLIGHT",
-        "Capacity":             "CAPACITY",
-        "SPKNumber":            "SPKNUM",
-        "KeyID":                "KEYID"
-    })
-
-    gdf = gdf.rename(columns=rename_map)
-
+    # 5) skip renaming—keep the original column names
     export_cols = [
-        "Name","FC_ID","HEIGHT","TFSPEED","TASKAREA",
-        "TAMOUNT","SFLIGHT","EFLIGHT","CAPACITY",
-        "SPKNUM","KEYID","geometry"
-    ]
+        "Name",
+        "Flight_Controller_ID",
+        "Height",
+        "Task_Flight_Speed",
+        "Task_Area",
+        "TaskAmount",
+        "StarFlight",
+        "EndFlight",
+        "Capacity",
+        "SPKNumber",
+        "KeyID",
+        "geometry"
+    ]    
 
     # 6) slice & wrap
     gdf = gpd.GeoDataFrame(
