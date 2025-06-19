@@ -52,6 +52,7 @@ def parse_kmls(folder: Path) -> gpd.GeoDataFrame:
                 'Name': name,
                 'Flight_Controller_ID': data.get('Flight Controller ID',''),
                 'Height': to_f(data.get('Height')),
+                'Route_Spacing': to_f(data.get('Route Spacing')),
                 'Task_Flight_Speed': to_f(data.get('Task Flight Speed')),
                 'Task_Area': to_f(data.get('Task Area')),
                 'geometry': LineString(coords)
@@ -136,10 +137,11 @@ def process_pipeline(merged):
     gdf = gdf.rename(columns={
         'Flight_Controller_ID': 'Flight_Con',
         'Task_Flight_Speed':    'Task_Fligh',
+        'Route_Spacing':        'Route_Spac',
     })
 
     export_cols = [
-        'Name','Flight_Con','Height','Task_Fligh',
+        'Name','Flight_Con','Height', 'Route_Spac', 'Task_Fligh',
         'Task_Area','TaskAmount','StarFlight','EndFlight',
         'Capacity','SPKNumber','KeyID','geometry'
     ]
@@ -161,7 +163,7 @@ def process_pipeline(merged):
     st.write("▶︎ Columns in the final GDF:", gdf.columns.tolist())
     # --- Display final output as a table ---
     st.write("**Final Export Data:**")
-    st.dataframe(gdf[['Name', 'Flight_Con', 'Height', 'Task_Fligh', 'Task_Area', 'TaskAmount', 'StarFlight', 'EndFlight', 'Capacity', 'SPKNumber', 'KeyID']].head(10))
+    st.dataframe(gdf[['Name', 'Flight_Con', 'Height', 'Route_Spac', 'Task_Fligh', 'Task_Area', 'TaskAmount', 'StarFlight', 'EndFlight', 'Capacity', 'SPKNumber', 'KeyID']].head(10))
     # --- Provide download link for final ZIP ---
     st.success("✅ Final ZIP ready for download.")
     st.download_button(
