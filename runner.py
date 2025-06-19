@@ -132,23 +132,37 @@ def process_pipeline(merged):
     gdf = merged_filt.merge(df1, on='Name', how='left')
     final_shp = OUT_DIR / f"{OUT_SPK}.shp"
 
+    # 1) rename to short aliases
+    gdf = gdf.rename(columns={
+        "Flight_Controller_ID":"FC_ID",      # 5 chars
+        "Task_Flight_Speed":"TFSPEED",       # 7 chars
+        "Task_Area":"TASKAREA",              # 8 chars
+        "TaskAmount":"TAMOUNT",              # 7 chars
+        "StarFlight":"SFLIGHT",              # 7 chars
+        "EndFlight":"EFLIGHT",               # 7 chars
+        "Capacity":"CAPACITY",               # 8 chars
+        "SPKNumber":"SPKNUM",                # 6 chars
+        "KeyID":"KEYID",                     # 5 chars
+        "Height":"HEIGHT"                    # 6 chars
+    })
 
     export_cols = [
-    "Name",
-    "Flight_Controller_ID",
-    "Height",
-    "Task_Flight_Speed",
-    "Task_Area",
-    "TaskAmount",
-    "StarFlight",
-    "EndFlight",
-    "Capacity",
-    "SPKNumber",
-    "KeyID",
-    "geometry"
+        "Name", "FC_ID", "HEIGHT", "TFSPEED", "TASKAREA",
+        "TAMOUNT", "SFLIGHT", "EFLIGHT", "CAPACITY",
+        "SPKNUM", "KEYID", "geometry"
     ]
-    gdf = gdf[export_cols]
+
+    # 2) slice and re-wrap as a GeoDataFrame
+    gdf = gpd.GeoDataFrame(
+        gdf[export_cols],
+        geometry="geometry",
+        crs="EPSG:4326"
+    )
+
+    # 3) write as ESRI Shapefile
+    final_shp = OUT_DIR / f"{OUT_SPK}.shp"
     gdf.to_file(final_shp, driver="ESRI Shapefile")
+
     # write CPG
     with open(OUT_DIR / f"{OUT_SPK}.cpg", 'w', encoding='utf-8') as f:
         f.write('UTF-8')
@@ -161,10 +175,16 @@ def process_pipeline(merged):
             p = final_shp.with_suffix(f'.{ext}')
             if p.exists():
                 zout.write(p, p.name)
+    # Display in Streamlit with the new field names:
     st.write("▶︎ Columns in the final GDF:", gdf.columns.tolist())
-    # --- Display final output as a table ---
-    st.write("**Final Export Data:**")
-    st.dataframe(gdf[['Name', 'Flight_Controller_ID', 'Height', 'Task_Flight_Speed', 'Task_Area', 'TaskAmount', 'StarFlight', 'EndFlight', 'Capacity', 'SPKNumber', 'KeyID']].head(10))
+    st.write("**Final Export Data (first 10 rows):**")
+    st.dataframe(
+        gdf[[
+            "Name", "FC_ID", "HEIGHT", "TFSPEED", "TASKAREA",
+            "TAMOUNT", "SFLIGHT", "EFLIGHT", "CAPACITY",
+            "SPKNUM", "KEYID"
+        ]].head(10)
+    )
     # --- Provide download link for final ZIP ---
     st.success("✅ Final ZIP ready for download.")
     st.download_button(
