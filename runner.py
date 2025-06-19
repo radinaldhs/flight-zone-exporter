@@ -26,6 +26,9 @@ EDIT_ZIP = Path("zones_for_edit.zip")
 if EDIT_ZIP.exists():
     EDIT_ZIP.unlink()
 
+if st.sidebar.button("🔄 Reset all"):
+    st.experimental_rerun()
+
 # --- Sidebar Inputs ---
 st.sidebar.header("Upload & Settings")
 zip_file = st.sidebar.file_uploader("1. Upload KML ZIP", type="zip")
