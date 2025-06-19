@@ -26,15 +26,12 @@ EDIT_ZIP = Path("zones_for_edit.zip")
 if EDIT_ZIP.exists():
     EDIT_ZIP.unlink()
 
-if st.sidebar.button("🔄 Reset all"):
-    st.session_state.clear()
-
 # --- Sidebar Inputs ---
 st.sidebar.header("Upload & Settings")
-zip_file = st.sidebar.file_uploader("1. Upload KML ZIP", type="zip", key="zip_file")
-excel_file = st.sidebar.file_uploader("2. Upload Excel", type=["xlsx","xlsm","xls"], key="excel_file")
-OUT_SPK = st.sidebar.text_input("3. SPK number", key="out_spk")
-OUT_KEYID = st.sidebar.text_input("4. KeyID", key="out_keyid")
+zip_file = st.sidebar.file_uploader("1. Upload KML ZIP", type="zip")
+excel_file = st.sidebar.file_uploader("2. Upload Excel", type=["xlsx","xlsm","xls"])
+OUT_SPK = st.sidebar.text_input("3. SPK number")
+OUT_KEYID = st.sidebar.text_input("4. KeyID")
 
 # --- Utility: Parse and merge KML layers ---
 def parse_kmls(folder: Path) -> gpd.GeoDataFrame:
