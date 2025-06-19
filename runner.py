@@ -55,10 +55,10 @@ def parse_kmls(folder: Path) -> gpd.GeoDataFrame:
             records.append(rec)
 
     gdf = gpd.GeoDataFrame(records, crs='EPSG:4326')
-    # try to coerce numeric columns
-    for c in gdf.columns:
-        if c != 'geometry':
-            gdf[c] = pd.to_numeric(gdf[c], errors='ignore')
+    # coerce the columns we know are numbers – anything else stays as a string
+    for numcol in ("Height", "Route_Spacing", "Task_Flight_Speed", "Task_Area", "Flight_Time", "Spray_amount"):
+        if numcol in gdf.columns:
+            gdf[numcol] = pd.to_numeric(gdf[numcol], errors='coerce')
     return gdf
 
 
@@ -135,10 +135,13 @@ def process_pipeline(merged):
     # export final shapefile
     gdf = merged_filt.merge(df1, on='Name', how='left')
 
-    # ── fill Height and Route_Spacing nulls with last known value (and if first row is null, with the next)
-    for _col in ('Height', 'Route_Spacing'):
-        if _col in gdf.columns:
-            gdf[_col] = gdf[_col].ffill().bfill()
+    # ────────────────────────────────────────────────
+    # 1) Fill nulls in Height and Route_Spacing
+    #    forward‐fill then back‐fill so leading & trailing NaNs get replaced
+    for col in ("Height", "Route_Spacing"):
+        if col in gdf.columns:
+            gdf[col] = gdf[col].ffill().bfill()
+    # ────────────────────────────────────────────────
 
     final_shp = OUT_DIR / f"{OUT_SPK}.shp"
 
