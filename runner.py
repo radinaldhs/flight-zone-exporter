@@ -22,7 +22,7 @@ FINAL_ZIP = Path("final_upload.zip")
 if FINAL_ZIP.exists():
     FINAL_ZIP.unlink()
 
-EDIT_ZIP = Path("zones_for_edit.zip")
+EDIT_ZIP = Path(f"zones_for_edit_{OUT_SPK}.zip")
 if EDIT_ZIP.exists():
     EDIT_ZIP.unlink()
 
@@ -147,7 +147,7 @@ def process_pipeline(merged):
     "KeyID",
     "geometry"
     ]
-    
+
     gdf = gdf[export_cols]
     gdf.to_file(final_shp, driver="ESRI Shapefile")
     # write CPG
@@ -165,7 +165,7 @@ def process_pipeline(merged):
     st.write("▶︎ Columns in the final GDF:", gdf.columns.tolist())
     # --- Display final output as a table ---
     st.write("**Final Export Data:**")
-    st.dataframe(gdf[['Name', 'Flight_Controller_ID', 'Height', 'Task_Flight_Speed', 'Task_Area', 'TaskAmount', 'StarFlight', 'EndFlight', 'Capacity', 'SPKNumber', 'KeyID']].head(10))
+    st.dataframe(gdf[['Name', 'Flight_Con', 'Height', 'Task_Fligh', 'Task_Area', 'TaskAmount', 'StarFlight', 'EndFlight', 'Capacity', 'SPKNumber', 'KeyID']].head(10))
     # --- Provide download link for final ZIP ---
     st.success("✅ Final ZIP ready for download.")
     st.download_button(
