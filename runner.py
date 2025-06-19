@@ -138,7 +138,7 @@ def process_pipeline(merged):
     # ────────────────────────────────────────────────
     # 1) Fill nulls in Height and Route_Spacing
     #    forward‐fill then back‐fill so leading & trailing NaNs get replaced
-    for col in ("Height", "Route_Spacing"):
+    for col in ("Height", "Route_Spacing", "Task_Flight_Speed"):
         if col in gdf.columns:
             gdf[col] = gdf[col].ffill().bfill()
     # ────────────────────────────────────────────────
