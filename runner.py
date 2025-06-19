@@ -132,25 +132,19 @@ def process_pipeline(merged):
     gdf = merged_filt.merge(df1, on='Name', how='left')
     final_shp = OUT_DIR / f"{OUT_SPK}.shp"
 
-    fc_col = 'Flight_Controller_ID' if 'Flight_Controller_ID' in gdf.columns else 'Flight_Con'
-    ts_col = 'Task_Flight_Speed'  if 'Task_Flight_Speed'  in gdf.columns else 'Task_Fligh'
+    # rename the _in-memory_ columns to their 10-char versions
+    gdf = gdf.rename(columns={
+        'Flight_Controller_ID': 'Flight_Con',
+        'Task_Flight_Speed':    'Task_Fligh',
+    })
 
     export_cols = [
-    'Name',
-    fc_col,
-    'Height',
-    ts_col,
-    'Task_Area',
-    'TaskAmount',
-    'StarFlight',
-    'EndFlight',
-    'Capacity',
-    'SPKNumber',
-    'KeyID',
-    'geometry'
+        'Name','Flight_Con','Height','Task_Fligh',
+        'Task_Area','TaskAmount','StarFlight','EndFlight',
+        'Capacity','SPKNumber','KeyID','geometry'
     ]
-
     gdf = gdf[export_cols]
+
     gdf.to_file(final_shp, driver="ESRI Shapefile")
     # write CPG
     with open(OUT_DIR / f"{OUT_SPK}.cpg", 'w', encoding='utf-8') as f:
