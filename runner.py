@@ -154,21 +154,22 @@ def process_pipeline(merged: gpd.GeoDataFrame):
         crs="EPSG:4326"
     )
 
-    # 7) write out
+    # 7) write out as GeoPackage instead of Shapefile
     OUT_DIR = WORK_DIR / "output"
-    if OUT_DIR.exists(): shutil.rmtree(OUT_DIR)
+    if OUT_DIR.exists():
+        shutil.rmtree(OUT_DIR)
     OUT_DIR.mkdir()
-    final_shp = OUT_DIR / f"{OUT_SPK}.shp"
-    gdf.to_file(final_shp, driver="ESRI Shapefile")
-    # write .cpg
-    (OUT_DIR / f"{OUT_SPK}.cpg").write_text("UTF-8", encoding="utf-8")
-    # zip
+
+    # write a .gpkg with full field names preserved
+    final_gpkg = OUT_DIR / f"{OUT_SPK}.gpkg"
+    gdf.to_file(final_gpkg, driver="GPKG", layer="zones")
+
+    # zip the .gpkg
     ZIP_OUT = WORK_DIR / "final_upload.zip"
-    if ZIP_OUT.exists(): ZIP_OUT.unlink()
+    if ZIP_OUT.exists():
+        ZIP_OUT.unlink()
     with zipfile.ZipFile(ZIP_OUT, "w", zipfile.ZIP_DEFLATED) as zout:
-        for ext in ("shp","shx","dbf","prj","cpg"):
-            p = final_shp.with_suffix(f".{ext}")
-            if p.exists(): zout.write(p, p.name)
+        zout.write(final_gpkg, final_gpkg.name)
 
     # 8) preview & download
     st.write("▶︎ Final columns:", gdf.columns.tolist())
