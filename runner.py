@@ -132,20 +132,22 @@ def process_pipeline(merged):
     gdf = merged_filt.merge(df1, on='Name', how='left')
     final_shp = OUT_DIR / f"{OUT_SPK}.shp"
 
+    fc_col = 'Flight_Controller_ID' if 'Flight_Controller_ID' in gdf.columns else 'Flight_Con'
+    ts_col = 'Task_Flight_Speed'  if 'Task_Flight_Speed'  in gdf.columns else 'Task_Fligh'
 
     export_cols = [
-    "Name",
-    "Flight_Con",
-    "Height",
-    "Task_Fligh",
-    "Task_Area",
-    "TaskAmount",
-    "StarFlight",
-    "EndFlight",
-    "Capacity",
-    "SPKNumber",
-    "KeyID",
-    "geometry"
+    'Name',
+    fc_col,
+    'Height',
+    ts_col,
+    'Task_Area',
+    'TaskAmount',
+    'StarFlight',
+    'EndFlight',
+    'Capacity',
+    'SPKNumber',
+    'KeyID',
+    'geometry'
     ]
 
     gdf = gdf[export_cols]
