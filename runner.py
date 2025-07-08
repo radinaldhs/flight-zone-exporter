@@ -141,21 +141,6 @@ def post_apply_edits_dynamic(upload_resp: dict):
         "Content-Type": "application/x-www-form-urlencoded"
     }
 
-    # Debug: show top-level keys of upload_resp
-    st.write("upload_resp keys:", list(upload_resp.keys()))
-
-    # # Determine where features are in the response
-    # if "featureCollection" in upload_resp:
-    #     layers = upload_resp["featureCollection"].get("layers", [])
-    #     if layers and "featureSet" in layers[0]:
-    #         features = layers[0]["featureSet"].get("features", [])
-    #     else:
-    #         features = []
-    # elif "featureSet" in upload_resp:
-    #     features = upload_resp["featureSet"].get("features", [])
-    # else:
-    #     features = []
-
     features = upload_resp.get("featureCollection", {}).get("layers", [])[0].get('featureSet', {}).get("features", [])
 
     adds = []
@@ -425,7 +410,6 @@ def handle_final_upload():
             try:
                 upload_result = upload_shapefile_to_server(final_path)
                 st.success("✅ Uploaded successfully.")
-                st.json(upload_result)
                 post_apply_edits_dynamic(upload_result)
                 st.success("✅ applyEdits call made.")
             except Exception as e:
@@ -470,7 +454,6 @@ if edited_zip:
                     try:
                         upload_result = upload_shapefile_to_server(WORK_DIR / "final_upload.zip")
                         st.success("✅ Uploaded successfully.")
-                        st.json(upload_result)
                         # Apply edits dynamically after upload
                         post_apply_edits_dynamic(upload_result)
                         st.success("✅ applyEdits call made.")
