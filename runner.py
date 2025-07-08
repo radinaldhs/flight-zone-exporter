@@ -178,7 +178,7 @@ def post_apply_edits_dynamic(upload_resp: dict):
             "Speed": feat["attributes"].get("Task_Fligh", 0),
             "TaskArea": feat["attributes"].get("Task_Area", 0),
             "SprayAmount": feat["attributes"].get("Spray_amou", 0),
-            "VendorName": "",
+            "VendorName": "PT SENTRA AGASHA NUSANTARA",
             "UserID": os.getenv('GIS_AUTH_USERNAME'),
             "CRT_Date": int(time.time() * 1000),
             }
