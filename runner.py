@@ -389,6 +389,40 @@ def process_pipeline(merged):
         file_name=ZIP_OUT.name
     )
 
+def delete_if_spk_exists(spk_number):
+    session = requests.Session()
+    token = get_final_token()
+
+    # Check for existing SPK features
+    check_resp = session.get(f"{BASE_URL}/query", params={
+        'f': 'json',
+        'where': f"SPKNumber='{spk_number}'",
+        'outFields': 'OBJECTID',
+        'returnGeometry': 'false',
+        'token': token
+    })
+    check_data = check_resp.json()
+    oids = [f['attributes']['OBJECTID'] for f in check_data.get('features', [])]
+
+    if not oids:
+        return True  # Nothing to delete, considered success
+
+    # Attempt to delete all found OBJECTIDs
+    for oid in oids:
+        del_resp = session.post(
+            f"{BASE_URL}/applyEdits",
+            headers=TOKEN_HEADERS,
+            data={
+                'f': 'json',
+                'deletes': str(oid),
+                'token': token
+            }
+        )
+        if not del_resp.ok:
+            st.error(f"❌ Failed to delete OBJECTID {oid}: {del_resp.status_code}")
+            return False
+    return True
+
 def handle_final_upload():
     final_path = WORK_DIR / "final_upload.zip"
     if not final_path.exists():
@@ -404,6 +438,10 @@ def handle_final_upload():
             merged = parse_kmls(WORK_DIR)
             process_pipeline(merged)
             final_path = WORK_DIR / "final_upload.zip"
+
+    if not delete_if_spk_exists(OUT_SPK):
+        st.error(f"❌ Failed to delete existing features for SPK {OUT_SPK}. Upload aborted.")
+        return
 
     if final_path.exists():
         with st.spinner("Uploading final shapefile ZIP..."):
