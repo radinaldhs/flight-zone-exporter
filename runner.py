@@ -144,17 +144,19 @@ def post_apply_edits_dynamic(upload_resp: dict):
     # Debug: show top-level keys of upload_resp
     st.write("upload_resp keys:", list(upload_resp.keys()))
 
-    # Determine where features are in the response
-    if "featureCollection" in upload_resp:
-        layers = upload_resp["featureCollection"].get("layers", [])
-        if layers and "featureSet" in layers[0]:
-            features = layers[0]["featureSet"].get("features", [])
-        else:
-            features = []
-    elif "featureSet" in upload_resp:
-        features = upload_resp["featureSet"].get("features", [])
-    else:
-        features = []
+    # # Determine where features are in the response
+    # if "featureCollection" in upload_resp:
+    #     layers = upload_resp["featureCollection"].get("layers", [])
+    #     if layers and "featureSet" in layers[0]:
+    #         features = layers[0]["featureSet"].get("features", [])
+    #     else:
+    #         features = []
+    # elif "featureSet" in upload_resp:
+    #     features = upload_resp["featureSet"].get("features", [])
+    # else:
+    #     features = []
+
+    features = upload_resp.get("featureCollection", {}).get("layers", [])[0].get('featureSet', {}).get("features", [])
 
     adds = []
     for feat in features:
