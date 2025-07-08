@@ -170,8 +170,8 @@ def post_apply_edits_dynamic(upload_resp: dict):
 
     # Log mapped FlightIDs and Names to Streamlit sidebar
     import streamlit as st
-    st.sidebar.write("Mapped FlightIDs:", [item["attributes"]["FlightID"] for item in adds])
-    st.sidebar.write("Corresponding Names:", [feat["attributes"].get("Name") for feat in features])
+    st.write("Mapped FlightIDs:", [item["attributes"]["FlightID"] for item in adds])
+    st.write("Corresponding Names:", [feat["attributes"].get("Name") for feat in features])
 
     payload = {
         "f": "json",
@@ -180,10 +180,10 @@ def post_apply_edits_dynamic(upload_resp: dict):
     response = requests.post(apply_url, data=payload, headers=headers)
     try:
         import streamlit as st
-        st.sidebar.info(f"📡 applyEdits POST: {apply_url}")
-        st.sidebar.write("🗂 Payload keys:", list(payload.keys()))
-        st.sidebar.write("📝 Payload 'adds' length:", len(payload['adds']))
-        st.sidebar.json(response.json())
+        st.info(f"📡 applyEdits POST: {apply_url}")
+        st.write("🗂 Payload keys:", list(payload.keys()))
+        st.write("📝 Payload 'adds' length:", len(payload['adds']))
+        st.json(response.json())
     except Exception:
         pass
     return response.json()
