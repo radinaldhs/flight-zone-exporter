@@ -71,11 +71,20 @@ BASE_URL = "https://maps.sinarmasforestry.com/arcgis/rest/services/PreFo/DroneSp
 SERVER_URL = "https://maps.sinarmasforestry.com/arcgis/rest/services/PreFo/DroneSprayingVendor/MapServer"
 TOKEN_URL = "https://maps.sinarmasforestry.com/portal/sharing/rest/generateToken"
 
+# --- ArcGIS Token Headers (for all token requests) ---
+TOKEN_HEADERS = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'Referer': 'https://maps.sinarmasforestry.com/UploadDroneManagements/',
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
+    'sec-ch-ua': '"Google Chrome";v="137", "Chromium";v="137", "Not/A)Brand";v="24"',
+    'sec-ch-ua-platform': '"macOS"',
+    'sec-ch-ua-mobile': '?0',
+}
+
 def get_final_token():
     session = requests.Session()
-
-    # Step 1
-    step1 = session.post(TOKEN_URL, data={
+    # Step 1: agasha123
+    step1 = session.post(TOKEN_URL, headers=TOKEN_HEADERS, data={
         'request': 'getToken',
         'username': os.getenv('GIS_AUTH_USERNAME'),
         'password': os.getenv('GIS_AUTH_PASSWORD'),
@@ -83,21 +92,36 @@ def get_final_token():
         'referer': 'https://maps.sinarmasforestry.com',
         'f': 'json'
     }).json()
-    if 'token' not in step1:
-        raise RuntimeError("❌ Failed to retrieve base token")
-    step1_token = step1['token']
+    step1_token = step1.get('token')
+    if not step1_token:
+        raise RuntimeError("❌ Failed step 1: agasha123 login")
 
-    # Step 2
-    step2 = session.post(TOKEN_URL, data={
+    # Step 2: scoped token for MapServer
+    step2 = session.post(TOKEN_URL, headers=TOKEN_HEADERS, data={
         'request': 'getToken',
         'serverUrl': SERVER_URL,
         'token': step1_token,
         'referer': 'https://maps.sinarmasforestry.com',
         'f': 'json'
     }).json()
-    if 'token' not in step2:
-        raise RuntimeError("❌ Failed to retrieve scoped token")
-    return step2['token']
+    scoped_token = step2.get('token')
+    if not scoped_token:
+        raise RuntimeError("❌ Failed step 2: scoped token")
+
+    # Step 3: fmiseditor
+    step3 = session.post(TOKEN_URL, headers=TOKEN_HEADERS, data={
+        'request': 'getToken',
+        'username': os.getenv('GIS_USERNAME'),
+        'password': os.getenv('GIS_PASSWORD'),
+        'expiration': '60',
+        'referer': 'https://maps.sinarmasforestry.com',
+        'f': 'json'
+    }).json()
+    final_token = step3.get('token')
+    if not final_token:
+        raise RuntimeError("❌ Failed step 3: final login")
+
+    return final_token
 
 def delete_spk_on_server(spk):
     session = requests.Session()
@@ -113,14 +137,20 @@ def delete_spk_on_server(spk):
     oids = [f['attributes']['OBJECTID'] for f in r.json().get('features', [])]
     if not oids:
         return f"🔍 No features found for SPK {spk}"
-    
+
     result = []
     for oid in oids:
-        d = session.post(f"{BASE_URL}/applyEdits", data={
-            'f': 'json',
-            'deletes': str(oid),
-            'token': token
-        })
+        d = session.post(
+            f"{BASE_URL}/applyEdits",
+            headers=TOKEN_HEADERS,
+            data={
+                'f': 'json',
+                'deletes': str(oid),
+                'token': token
+            }
+        )
+        if not d.ok:
+            raise RuntimeError(f"Delete failed for OBJECTID {oid}: {d.status_code} {d.text}")
         result.append(d.json())
     return f"✅ Deleted {len(result)} objects for SPK {spk}"
 
