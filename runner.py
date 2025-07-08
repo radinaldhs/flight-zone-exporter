@@ -170,7 +170,7 @@ with st.container():
             for key in ["show_delete_confirm"]:
                 if key in st.session_state:
                     del st.session_state[key]
-            st.experimental_rerun()
+            st.rerun()
 
 # Confirmation modal
 if st.session_state.get("show_delete_confirm"):
