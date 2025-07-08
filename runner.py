@@ -158,13 +158,19 @@ def parse_kmls(folder: Path) -> gpd.GeoDataFrame:
 
 # Move delete button to top-right corner
 with st.container():
-    delete_col1, delete_col2 = st.columns([9, 1])
+    delete_col1, delete_col2, reset_col = st.columns([8, 1, 1])
     with delete_col2:
         if OUT_SPK:
             if st.button("🗑️", help="Delete Existing SPK Data", key="delete_button"):
                 st.session_state.show_delete_confirm = True
         else:
             st.button("🗑️", help="Enter SPK number to enable delete", key="delete_disabled", disabled=True)
+    with reset_col:
+        if st.button("❌", help="Clear all inputs and restart", key="reset_button"):
+            for key in ["show_delete_confirm"]:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.experimental_rerun()
 
 # Confirmation modal
 if st.session_state.get("show_delete_confirm"):
@@ -175,7 +181,7 @@ if st.session_state.get("show_delete_confirm"):
             with st.spinner(f"Deleting data for SPK {OUT_SPK}..."):
                 result = delete_spk_on_server(OUT_SPK)
                 st.success(result)
-            st.session_state.show_delete_confirm = False
+                st.session_state.show_delete_confirm = False
     with confirm_col2:
         if st.button("❌ Cancel", key="cancel_delete_button"):
             st.session_state.show_delete_confirm = False
