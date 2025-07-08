@@ -1,3 +1,53 @@
+def post_apply_edits_dynamic(spk: str, keyid: str):
+    token = get_final_token()
+    apply_url = f"{BASE_URL}/applyEdits"
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+
+    # Load geometries from shapefile (uploaded final shapefile path)
+    final_shp_path = WORK_DIR / "output" / f"{spk}.shp"
+    if not final_shp_path.exists():
+        raise FileNotFoundError("Final shapefile not found for applyEdits.")
+
+    gdf = gpd.read_file(final_shp_path)
+    gdf = gdf.to_crs(epsg=3857)
+
+    adds = []
+    for idx, row in gdf.iterrows():
+        coords = list(row.geometry.coords)
+        adds.append({
+            "geometry": {
+                "paths": [coords],
+                "spatialReference": {"wkid": 102100, "latestWkid": 3857}
+            },
+            "attributes": {
+                "FlightID": f"R{int(time.time() * 1000) + idx}",
+                "DroneID": "1581F6BUB2456001G6K8",
+                "DroneCapacity": 25,
+                "SPKNumber": spk,
+                "KeyID": keyid,
+                "StartFlight": int(time.time() * 1000),
+                "EndFlight": int(time.time() * 1000 + 50000),
+                "ProcessedDate": int(time.time() * 1000),
+                "Height": row.get("Height", 2.5),
+                "Width": 4,
+                "Speed": row.get("Task_Flight_Speed", 5),
+                "TaskArea": row.get("Task_Area", 0),
+                "SprayAmount": row.get("TaskAmount", 0),
+                "VendorName": "",
+                "UserID": "agasha123",
+                "CRT_Date": int(time.time() * 1000)
+            }
+        })
+
+    payload = {
+        "f": "json",
+        "token": token,
+        "adds": json.dumps(adds)
+    }
+    response = requests.post(apply_url, data=payload, headers=headers)
+    return response.json()
 import streamlit as st
 import zipfile
 import shutil
@@ -247,6 +297,9 @@ def handle_final_upload():
                 result = upload_shapefile_to_server(final_path)
                 st.sidebar.success("✅ Uploaded successfully.")
                 st.json(result)
+                apply_result = post_apply_edits_dynamic(OUT_SPK, OUT_KEYID)
+                st.sidebar.success("✅ applyEdits completed.")
+                st.json(apply_result)
             except Exception as e:
                 st.sidebar.error(str(e))
 
