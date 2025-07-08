@@ -169,6 +169,7 @@ def post_apply_edits_dynamic(upload_resp: dict):
         })
 
     # Log mapped FlightIDs and Names to Streamlit sidebar
+    import streamlit as st
     st.sidebar.write("Mapped FlightIDs:", [item["attributes"]["FlightID"] for item in adds])
     st.sidebar.write("Corresponding Names:", [feat["attributes"].get("Name") for feat in features])
 
