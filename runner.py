@@ -168,18 +168,17 @@ with st.container():
 
 # Confirmation modal
 if st.session_state.get("show_delete_confirm"):
-    with st.modal("⚠️ Confirm Deletion"):
-        st.markdown(f"Are you sure you want to delete all features for SPK **{OUT_SPK}**?")
-        confirm_col1, confirm_col2 = st.columns(2)
-        with confirm_col1:
-            if st.button("✅ Yes, Delete"):
-                with st.spinner(f"Deleting data for SPK {OUT_SPK}..."):
-                    result = delete_spk_on_server(OUT_SPK)
-                    st.success(result)
-                st.session_state.show_delete_confirm = False
-        with confirm_col2:
-            if st.button("❌ Cancel"):
-                st.session_state.show_delete_confirm = False
+    st.warning(f"⚠️ Are you sure you want to delete all features for SPK **{OUT_SPK}**?")
+    confirm_col1, confirm_col2 = st.columns(2)
+    with confirm_col1:
+        if st.button("✅ Yes, Delete", key="confirm_delete_button"):
+            with st.spinner(f"Deleting data for SPK {OUT_SPK}..."):
+                result = delete_spk_on_server(OUT_SPK)
+                st.success(result)
+            st.session_state.show_delete_confirm = False
+    with confirm_col2:
+        if st.button("❌ Cancel", key="cancel_delete_button"):
+            st.session_state.show_delete_confirm = False
 
 
 # --- Step 5: Generate Shapefile ZIP for QGIS editing ---
