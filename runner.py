@@ -424,12 +424,12 @@ def handle_final_upload():
         with st.spinner("Uploading final shapefile ZIP..."):
             try:
                 upload_result = upload_shapefile_to_server(final_path)
-                st.sidebar.success("✅ Uploaded successfully.")
+                st.success("✅ Uploaded successfully.")
                 st.json(upload_result)
                 post_apply_edits_dynamic(upload_result)
-                st.sidebar.success("✅ applyEdits call made.")
+                st.success("✅ applyEdits call made.")
             except Exception as e:
-                st.sidebar.error(str(e))
+                st.error(str(e))
 
 if st.sidebar.button("📤 Upload Final ZIP to maps.sinarmasforestry.com"):
     handle_final_upload()
