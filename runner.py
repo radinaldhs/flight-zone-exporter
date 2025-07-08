@@ -144,40 +144,28 @@ def post_apply_edits_dynamic(upload_resp: dict):
     # Debug: show top-level keys of upload_resp
     st.write("upload_resp keys:", list(upload_resp.keys()))
 
-    # # Determine where features are in the response
-    # if "featureCollection" in upload_resp:
-    #     layers = upload_resp["featureCollection"].get("layers", [])
-    #     if layers and "featureSet" in layers[0]:
-    #         features = layers[0]["featureSet"].get("features", [])
-    #     else:
-    #         features = []
-    # elif "featureSet" in upload_resp:
-    #     features = upload_resp["featureSet"].get("features", [])
-    # else:
-    #     features = []
-
     features = upload_resp.get("featureCollection", {}).get("layers", [])[0].get('featureSet', {}).get("features", [])
 
     adds = []
     for feat in features:
         adds.append({
             "aggregateGeometries": None,
-            "geometry": feat["geometry"],
+            "geometry": feat.get["geometry"],
             "symbol": None,
             "attributes": {
-                "FlightID": feat["attributes"].get("Name"),
-                "DroneID": feat["attributes"].get("Flight_Con"),
-                "DroneCapacity": feat["attributes"].get("DroneCapacity", 25),
+                "FlightID": feat.get["attributes"].get("Name"),
+                "DroneID": feat.get["attributes"].get("Flight_Con"),
+                "DroneCapacity": feat.get["attributes"].get("DroneCapacity", 25),
                 "SPKNumber": OUT_SPK,
                 "KeyID": OUT_KEYID,
-                "StartFlight": feat["attributes"].get("StartFlight", ""),
-                "EndFlight": feat["attributes"].get("EndFlight", ""),
+                "StartFlight": feat.get["attributes"].get("StartFlight", ""),
+                "EndFlight": feat.get["attributes"].get("EndFlight", ""),
                 "ProcessDate": int(time.time() * 1000),
-                "Height": feat["attributes"].get("Height", 0),
-                "Width": feat["attributes"].get("Route_Spac", 0),
-                "Speed": feat["attributes"].get("Task_Fligh", 0),
-                "TaskArea": feat["attributes"].get("Task_Area", 0),
-                "SprayAmount": feat["attributes"].get("Spray_amou", 0),
+                "Height": feat.get["attributes"].get("Height", 0),
+                "Width": feat.get["attributes"].get("Route_Spac", 0),
+                "Speed": feat.get["attributes"].get("Task_Fligh", 0),
+                "TaskArea": feat.get["attributes"].get("Task_Area", 0),
+                "SprayAmount": feat.get["attributes"].get("Spray_amou", 0),
                 "VendorName": "",
                 "UserID": os.getenv('GIS_USERNAME'),
                 "CRT_Date": int(time.time() * 1000),
