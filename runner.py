@@ -8,6 +8,100 @@ from openpyxl import load_workbook
 import xml.etree.ElementTree as ET
 from shapely.geometry import LineString
 import datetime
+import requests
+import os
+import json
+import time
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# === ArcGIS Config ===
+BASE_URL = "https://maps.sinarmasforestry.com/arcgis/rest/services/PreFo/DroneSprayingVendor/FeatureServer/0"
+SERVER_URL = "https://maps.sinarmasforestry.com/arcgis/rest/services/PreFo/DroneSprayingVendor/MapServer"
+TOKEN_URL = "https://maps.sinarmasforestry.com/portal/sharing/rest/generateToken"
+
+def get_final_token():
+    session = requests.Session()
+
+    # Step 1
+    step1 = session.post(TOKEN_URL, data={
+        'request': 'getToken',
+        'username': os.getenv('GIS_AUTH_USERNAME'),
+        'password': os.getenv('GIS_AUTH_PASSWORD'),
+        'expiration': '60',
+        'referer': 'https://maps.sinarmasforestry.com',
+        'f': 'json'
+    }).json()
+    if 'token' not in step1:
+        raise RuntimeError("❌ Failed to retrieve base token")
+    step1_token = step1['token']
+
+    # Step 2
+    step2 = session.post(TOKEN_URL, data={
+        'request': 'getToken',
+        'serverUrl': SERVER_URL,
+        'token': step1_token,
+        'referer': 'https://maps.sinarmasforestry.com',
+        'f': 'json'
+    }).json()
+    if 'token' not in step2:
+        raise RuntimeError("❌ Failed to retrieve scoped token")
+    return step2['token']
+
+def delete_spk_on_server(spk):
+    session = requests.Session()
+    token = get_final_token()
+
+    r = session.get(f"{BASE_URL}/query", params={
+        'f': 'json',
+        'where': f"SPKNumber='{spk}'",
+        'outFields': 'OBJECTID',
+        'returnGeometry': 'false',
+        'token': token
+    })
+    oids = [f['attributes']['OBJECTID'] for f in r.json().get('features', [])]
+    if not oids:
+        return f"🔍 No features found for SPK {spk}"
+    
+    result = []
+    for oid in oids:
+        d = session.post(f"{BASE_URL}/applyEdits", data={
+            'f': 'json',
+            'deletes': str(oid),
+            'token': token
+        })
+        result.append(d.json())
+    return f"✅ Deleted {len(result)} objects for SPK {spk}"
+
+def upload_shapefile_to_server(zip_path: Path):
+    session = requests.Session()
+    token = get_final_token()
+
+    with open(zip_path, 'rb') as f:
+        files = {
+            'file': ('final_upload.zip', f, 'application/zip'),
+            'token': (None, token)
+        }
+        resp = session.post(
+            "https://maps.sinarmasforestry.com/portal/sharing/rest/content/features/generate",
+            params={
+                'filetype': 'shapefile',
+                'publishParameters': json.dumps({
+                    'name': 'UploadedZone_' + OUT_SPK,
+                    'maxRecordCount': 1000,
+                    'enforceInputFileSizeLimit': True,
+                    'enforceOutputJsonSizeLimit': True,
+                }),
+                'f': 'json',
+                'token': token
+            },
+            files=files
+        )
+    if resp.ok:
+        return resp.json()
+    else:
+        raise RuntimeError(f"Upload failed: {resp.status_code} {resp.text}")
 
 # --- Page Configuration (must be first Streamlit command) ---
 st.set_page_config(page_title="Flight-Zone Selector & Exporter")
@@ -90,6 +184,29 @@ if st.sidebar.button("5. Generate & Download Shapefile ZIP for QGIS Edit"):
             data=open(edit_zip,'rb').read(),
             file_name=edit_zip.name
         )
+
+# Optional: Delete existing SPK data from maps.sinarmasforestry.com
+if st.sidebar.button("❌ Delete Existing SPK Data"):
+    if not OUT_SPK:
+        st.sidebar.warning("Please enter SPK number.")
+    else:
+        with st.spinner(f"Deleting data for SPK {OUT_SPK}..."):
+            result = delete_spk_on_server(OUT_SPK)
+            st.sidebar.success(result)
+
+# Optional: Upload to maps.sinarmasforestry.com
+if st.sidebar.button("📤 Upload Final ZIP to maps.sinarmasforestry.com"):
+    final_path = WORK_DIR / "final_upload.zip"
+    if not final_path.exists():
+        st.sidebar.error("Final upload ZIP not found.")
+    else:
+        with st.spinner("Uploading final shapefile ZIP..."):
+            try:
+                result = upload_shapefile_to_server(final_path)
+                st.sidebar.success("✅ Uploaded successfully.")
+                st.json(result)
+            except Exception as e:
+                st.sidebar.error(str(e))
 
 st.markdown("---")
 
@@ -205,6 +322,17 @@ if edited_zip:
         merged = gpd.read_file(shp_temp)
         st.write("**Edited Zones Loaded:**", merged[['Name','Task_Area']])
         process_pipeline(merged)
+
+        # Offer upload option after processing
+        if (WORK_DIR / "final_upload.zip").exists():
+            if st.button("📤 Upload Final ZIP to maps.sinarmasforestry.com"):
+                with st.spinner("Uploading final shapefile ZIP..."):
+                    try:
+                        result = upload_shapefile_to_server(WORK_DIR / "final_upload.zip")
+                        st.success("✅ Uploaded successfully.")
+                        st.json(result)
+                    except Exception as e:
+                        st.error(str(e))
 elif st.sidebar.button("Skip edit and generate final ZIP"):
     # parse original KMLs
     ZIP_IN = WORK_DIR / "data.zip"
@@ -214,6 +342,17 @@ elif st.sidebar.button("Skip edit and generate final ZIP"):
         zin.extractall(WORK_DIR)
     merged = parse_kmls(WORK_DIR)
     process_pipeline(merged)
+
+    # Offer upload option after processing
+    if (WORK_DIR / "final_upload.zip").exists():
+        if st.button("📤 Upload Final ZIP to maps.sinarmasforestry.com"):
+            with st.spinner("Uploading final shapefile ZIP..."):
+                try:
+                    result = upload_shapefile_to_server(WORK_DIR / "final_upload.zip")
+                    st.success("✅ Uploaded successfully.")
+                    st.json(result)
+                except Exception as e:
+                    st.error(str(e))
 
 # --- Footer / Watermark (fixed at bottom) ---
 year = datetime.date.today().year
