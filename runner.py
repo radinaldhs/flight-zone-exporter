@@ -22,7 +22,7 @@ def post_apply_edits_dynamic(spk: str, keyid: str):
                 "spatialReference": {"wkid": 102100, "latestWkid": 3857}
             },
             "attributes": {
-                "FlightID": f"R{int(time.time() * 1000) + idx}",
+                "FlightID": row.get("FlightID", f"R{int(time.time() * 1000) + idx}"),
                 "DroneID": "1581F6BUB2456001G6K8",
                 "DroneCapacity": 25,
                 "SPKNumber": spk,
