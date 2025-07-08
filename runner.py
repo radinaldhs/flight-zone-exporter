@@ -404,8 +404,13 @@ def delete_if_spk_exists(spk_number):
     check_data = check_resp.json()
     oids = [f['attributes']['OBJECTID'] for f in check_data.get('features', [])]
 
-    if not oids:
-        return True  # Nothing to delete, considered success
+    # Visual feedback: show found or not found
+    if oids:
+        st.info(f"🧾 SPK Found: {len(oids)} record(s) with SPK {spk_number}")
+        st.write("⏳ Deleting...")
+    else:
+        st.info(f"✅ No existing records found for SPK {spk_number}")
+        return True
 
     # Attempt to delete all found OBJECTIDs
     for oid in oids:
@@ -421,6 +426,7 @@ def delete_if_spk_exists(spk_number):
         if not del_resp.ok:
             st.error(f"❌ Failed to delete OBJECTID {oid}: {del_resp.status_code}")
             return False
+    st.success(f"✅ Successfully deleted {len(oids)} record(s) for SPK {spk_number}")
     return True
 
 def handle_final_upload():
