@@ -194,8 +194,8 @@ def post_apply_edits_dynamic(upload_resp: dict):
 
     response = requests.post(apply_url, data=payload, headers=headers)
     try:
-        st.info(f"📡 applyEdits POST: {apply_url}")
-        st.write("🗂 Payload:", list(payload))
+        st.write("🗂 Payload keys:", list(payload.keys()))
+        st.write('Payload adds:', json.dumps(adds, indent=2))
         st.json(response.json())
     except Exception:
         pass
