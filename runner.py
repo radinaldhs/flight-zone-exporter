@@ -134,14 +134,28 @@ def upload_shapefile_to_server(zip_path: Path):
         raise RuntimeError(f"Upload failed: {resp.status_code} {resp.text}")
 
 def post_apply_edits_dynamic(upload_resp: dict):
+    import streamlit as st
     token = get_final_token()
     apply_url = f"{BASE_URL}/applyEdits?token={token}"
     headers = {
         "Content-Type": "application/x-www-form-urlencoded"
     }
 
-    # Build adds[] directly from upload response features
-    features = upload_resp.get("featureSet", {}).get("features", [])
+    # Debug: show top-level keys of upload_resp
+    st.write("upload_resp keys:", list(upload_resp.keys()))
+
+    # Determine where features are in the response
+    if "featureCollection" in upload_resp:
+        layers = upload_resp["featureCollection"].get("layers", [])
+        if layers and "featureSet" in layers[0]:
+            features = layers[0]["featureSet"].get("features", [])
+        else:
+            features = []
+    elif "featureSet" in upload_resp:
+        features = upload_resp["featureSet"].get("features", [])
+    else:
+        features = []
+
     adds = []
     for feat in features:
         adds.append({
@@ -168,21 +182,20 @@ def post_apply_edits_dynamic(upload_resp: dict):
             }
         })
 
-    # Log mapped FlightIDs and Names to Streamlit sidebar
-    import streamlit as st
-    st.write("Mapped FlightIDs:", [item["attributes"]["FlightID"] for item in adds])
-    st.write("Corresponding Names:", [feat["attributes"].get("Name") for feat in features])
-
     payload = {
         "f": "json",
         "adds": json.dumps(adds)
     }
+
+    # Log mapped FlightIDs and Names to Streamlit sidebar
+    adds_dict = json.loads(payload["adds"])
+    st.write("Mapped FlightIDs:", [item["attributes"]["FlightID"] for item in adds_dict])
+    st.write("Corresponding Names:", [feat["attributes"].get("Name") for feat in features])
+
     response = requests.post(apply_url, data=payload, headers=headers)
     try:
-        import streamlit as st
         st.info(f"📡 applyEdits POST: {apply_url}")
         st.write("🗂 Payload keys:", list(payload.keys()))
-        st.write("📝 Payload 'adds' length:", len(payload['adds']))
         st.json(response.json())
     except Exception:
         pass
