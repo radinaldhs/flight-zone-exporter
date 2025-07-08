@@ -144,7 +144,6 @@ def post_apply_edits_dynamic(upload_resp: dict):
     features = upload_resp.get("featureSet", {}).get("features", [])
     adds = []
     for feat in features:
-        print(f"Processing feature: {feat}")
         adds.append({
             "aggregateGeometries": None,
             "geometry": feat["geometry"],
@@ -166,9 +165,12 @@ def post_apply_edits_dynamic(upload_resp: dict):
                 "VendorName": "PT SENTRA AGASHA NUSANTARA",
                 "UserID": os.getenv('GIS_USERNAME'),
                 "CRT_Date": int(time.time() * 1000),
-
             }
         })
+
+    # Log mapped FlightIDs and Names to Streamlit sidebar
+    st.sidebar.write("Mapped FlightIDs:", [item["attributes"]["FlightID"] for item in adds])
+    st.sidebar.write("Corresponding Names:", [feat["attributes"].get("Name") for feat in features])
 
     payload = {
         "f": "json",
@@ -462,7 +464,7 @@ if edited_zip:
                         st.json(upload_result)
                         # Apply edits dynamically after upload
                         post_apply_edits_dynamic(upload_result)
-                        st.sidebar.success("✅ applyEdits call made.")
+                        st.success("✅ applyEdits call made.")
                     except Exception as e:
                         st.error(str(e))
 elif st.sidebar.button("Skip edit and generate final ZIP"):
@@ -488,7 +490,7 @@ elif st.sidebar.button("Skip edit and generate final ZIP"):
                         st.json(upload_result)
                         # Apply edits dynamically after upload
                         post_apply_edits_dynamic(upload_result)
-                        st.sidebar.success("✅ applyEdits call made.")
+                        st.success("✅ applyEdits call made.")
                     except Exception as e:
                         st.error(str(e))
 
