@@ -156,6 +156,32 @@ def parse_kmls(folder: Path) -> gpd.GeoDataFrame:
     return gdf
 
 
+# Move delete button to top-right corner
+with st.container():
+    delete_col1, delete_col2 = st.columns([9, 1])
+    with delete_col2:
+        if OUT_SPK:
+            if st.button("🗑️", help="Delete Existing SPK Data", key="delete_button"):
+                st.session_state.show_delete_confirm = True
+        else:
+            st.button("🗑️", help="Enter SPK number to enable delete", key="delete_disabled", disabled=True)
+
+# Confirmation modal
+if st.session_state.get("show_delete_confirm"):
+    with st.modal("⚠️ Confirm Deletion"):
+        st.markdown(f"Are you sure you want to delete all features for SPK **{OUT_SPK}**?")
+        confirm_col1, confirm_col2 = st.columns(2)
+        with confirm_col1:
+            if st.button("✅ Yes, Delete"):
+                with st.spinner(f"Deleting data for SPK {OUT_SPK}..."):
+                    result = delete_spk_on_server(OUT_SPK)
+                    st.success(result)
+                st.session_state.show_delete_confirm = False
+        with confirm_col2:
+            if st.button("❌ Cancel"):
+                st.session_state.show_delete_confirm = False
+
+
 # --- Step 5: Generate Shapefile ZIP for QGIS editing ---
 if st.sidebar.button("5. Generate & Download Shapefile ZIP for QGIS Edit"):
     if not (zip_file and excel_file and OUT_SPK and OUT_KEYID):
@@ -185,21 +211,25 @@ if st.sidebar.button("5. Generate & Download Shapefile ZIP for QGIS Edit"):
             file_name=edit_zip.name
         )
 
-# Optional: Delete existing SPK data from maps.sinarmasforestry.com
-if st.sidebar.button("❌ Delete Existing SPK Data"):
-    if not OUT_SPK:
-        st.sidebar.warning("Please enter SPK number.")
-    else:
-        with st.spinner(f"Deleting data for SPK {OUT_SPK}..."):
-            result = delete_spk_on_server(OUT_SPK)
-            st.sidebar.success(result)
 
-# Optional: Upload to maps.sinarmasforestry.com
-if st.sidebar.button("📤 Upload Final ZIP to maps.sinarmasforestry.com"):
+
+def handle_final_upload():
     final_path = WORK_DIR / "final_upload.zip"
     if not final_path.exists():
-        st.sidebar.error("Final upload ZIP not found.")
-    else:
+        # Try generating it automatically if inputs are valid
+        if not (zip_file and excel_file and OUT_SPK and OUT_KEYID):
+            st.sidebar.error("Final upload ZIP not found. Please complete inputs or generate it manually.")
+        else:
+            ZIP_IN = WORK_DIR / "data.zip"
+            with open(ZIP_IN, 'wb') as f:
+                f.write(zip_file.getbuffer())
+            with zipfile.ZipFile(ZIP_IN, 'r') as zin:
+                zin.extractall(WORK_DIR)
+            merged = parse_kmls(WORK_DIR)
+            process_pipeline(merged)
+            final_path = WORK_DIR / "final_upload.zip"
+
+    if final_path.exists():
         with st.spinner("Uploading final shapefile ZIP..."):
             try:
                 result = upload_shapefile_to_server(final_path)
@@ -207,6 +237,9 @@ if st.sidebar.button("📤 Upload Final ZIP to maps.sinarmasforestry.com"):
                 st.json(result)
             except Exception as e:
                 st.sidebar.error(str(e))
+
+if st.sidebar.button("📤 Upload Final ZIP to maps.sinarmasforestry.com"):
+    handle_final_upload()
 
 st.markdown("---")
 
@@ -334,25 +367,28 @@ if edited_zip:
                     except Exception as e:
                         st.error(str(e))
 elif st.sidebar.button("Skip edit and generate final ZIP"):
-    # parse original KMLs
-    ZIP_IN = WORK_DIR / "data.zip"
-    with open(ZIP_IN, 'wb') as f:
-        f.write(zip_file.getbuffer())
-    with zipfile.ZipFile(ZIP_IN, 'r') as zin:
-        zin.extractall(WORK_DIR)
-    merged = parse_kmls(WORK_DIR)
-    process_pipeline(merged)
+    if not (zip_file and excel_file and OUT_SPK and OUT_KEYID):
+        st.sidebar.error("Please provide all inputs (ZIP, Excel, SPK, KeyID) before skipping edit.")
+    else:
+        # parse original KMLs
+        ZIP_IN = WORK_DIR / "data.zip"
+        with open(ZIP_IN, 'wb') as f:
+            f.write(zip_file.getbuffer())
+        with zipfile.ZipFile(ZIP_IN, 'r') as zin:
+            zin.extractall(WORK_DIR)
+        merged = parse_kmls(WORK_DIR)
+        process_pipeline(merged)
 
-    # Offer upload option after processing
-    if (WORK_DIR / "final_upload.zip").exists():
-        if st.button("📤 Upload Final ZIP to maps.sinarmasforestry.com"):
-            with st.spinner("Uploading final shapefile ZIP..."):
-                try:
-                    result = upload_shapefile_to_server(WORK_DIR / "final_upload.zip")
-                    st.success("✅ Uploaded successfully.")
-                    st.json(result)
-                except Exception as e:
-                    st.error(str(e))
+        # Offer upload option after processing
+        if (WORK_DIR / "final_upload.zip").exists():
+            if st.button("📤 Upload Final ZIP to maps.sinarmasforestry.com"):
+                with st.spinner("Uploading final shapefile ZIP..."):
+                    try:
+                        result = upload_shapefile_to_server(WORK_DIR / "final_upload.zip")
+                        st.success("✅ Uploaded successfully.")
+                        st.json(result)
+                    except Exception as e:
+                        st.error(str(e))
 
 # --- Footer / Watermark (fixed at bottom) ---
 year = datetime.date.today().year
