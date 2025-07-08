@@ -491,6 +491,9 @@ if edited_zip:
         # Offer upload option after processing
         if (WORK_DIR / "final_upload.zip").exists():
             if st.button("📤 Upload Final ZIP to maps.sinarmasforestry.com"):
+                if not delete_if_spk_exists(OUT_SPK):
+                    st.error(f"❌ Failed to delete existing features for SPK {OUT_SPK}. Upload aborted.")
+                    st.stop()
                 with st.spinner("Uploading final shapefile ZIP..."):
                     try:
                         upload_result = upload_shapefile_to_server(WORK_DIR / "final_upload.zip")
@@ -516,6 +519,9 @@ elif st.sidebar.button("Skip edit and generate final ZIP"):
         # Offer upload option after processing
         if (WORK_DIR / "final_upload.zip").exists():
             if st.button("📤 Upload Final ZIP to maps.sinarmasforestry.com"):
+                if not delete_if_spk_exists(OUT_SPK):
+                    st.error(f"❌ Failed to delete existing features for SPK {OUT_SPK}. Upload aborted.")
+                    st.stop()
                 with st.spinner("Uploading final shapefile ZIP..."):
                     try:
                         upload_result = upload_shapefile_to_server(WORK_DIR / "final_upload.zip")
