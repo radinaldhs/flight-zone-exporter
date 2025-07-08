@@ -415,9 +415,6 @@ def handle_final_upload():
             except Exception as e:
                 st.error(str(e))
 
-if st.sidebar.button("📤 Upload Final ZIP to maps.sinarmasforestry.com"):
-    handle_final_upload()
-
 st.markdown("---")
 
 # --- Step 6: Upload Edited Shapefile ZIP or Skip editing ---
@@ -486,6 +483,9 @@ elif st.sidebar.button("Skip edit and generate final ZIP"):
                     except Exception as e:
                         st.error(str(e))
 
+if st.sidebar.button("📤 Upload Final ZIP to maps.sinarmasforestry.com"):
+    handle_final_upload()
+    
 # --- Footer / Watermark (fixed at bottom) ---
 year = datetime.date.today().year
 footer_html = f"""
