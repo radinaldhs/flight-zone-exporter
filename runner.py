@@ -1,6 +1,6 @@
 def post_apply_edits_dynamic(spk: str, keyid: str):
     token = get_final_token()
-    apply_url = f"{BASE_URL}/applyEdits"
+    apply_url = f"{BASE_URL}/applyEdits?token={token}"
     headers = {
         "Content-Type": "application/x-www-form-urlencoded"
     }
@@ -43,10 +43,17 @@ def post_apply_edits_dynamic(spk: str, keyid: str):
 
     payload = {
         "f": "json",
-        "token": token,
         "adds": json.dumps(adds)
     }
     response = requests.post(apply_url, data=payload, headers=headers)
+    try:
+        import streamlit as st
+        st.sidebar.info(f"📡 applyEdits POST: {apply_url}")
+        st.sidebar.write("🗂 Payload keys:", list(payload.keys()))
+        st.sidebar.write("📝 Payload 'adds' length:", len(payload['adds']))
+        st.sidebar.json(response.json())
+    except Exception:
+        pass
     return response.json()
 import streamlit as st
 import zipfile
@@ -327,9 +334,8 @@ def handle_final_upload():
                 result = upload_shapefile_to_server(final_path)
                 st.sidebar.success("✅ Uploaded successfully.")
                 st.json(result)
-                apply_result = post_apply_edits_dynamic(OUT_SPK, OUT_KEYID)
-                st.sidebar.success("✅ applyEdits completed.")
-                st.json(apply_result)
+                post_apply_edits_dynamic(OUT_SPK, OUT_KEYID)
+                st.sidebar.success("✅ applyEdits call made.")
             except Exception as e:
                 st.sidebar.error(str(e))
 
