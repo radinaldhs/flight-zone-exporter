@@ -465,6 +465,9 @@ if edited_zip:
                         result = upload_shapefile_to_server(WORK_DIR / "final_upload.zip")
                         st.success("✅ Uploaded successfully.")
                         st.json(result)
+                        # Apply edits dynamically after upload
+                        post_apply_edits_dynamic(OUT_SPK, OUT_KEYID)
+                        st.sidebar.success("✅ applyEdits call made.")
                     except Exception as e:
                         st.error(str(e))
 elif st.sidebar.button("Skip edit and generate final ZIP"):
@@ -488,6 +491,9 @@ elif st.sidebar.button("Skip edit and generate final ZIP"):
                         result = upload_shapefile_to_server(WORK_DIR / "final_upload.zip")
                         st.success("✅ Uploaded successfully.")
                         st.json(result)
+                        # Apply edits dynamically after upload
+                        post_apply_edits_dynamic(OUT_SPK, OUT_KEYID)
+                        st.sidebar.success("✅ applyEdits call made.")
                     except Exception as e:
                         st.error(str(e))
 
