@@ -1,60 +1,3 @@
-def post_apply_edits_dynamic(spk: str, keyid: str):
-    token = get_final_token()
-    apply_url = f"{BASE_URL}/applyEdits?token={token}"
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded"
-    }
-
-    # Load geometries from shapefile (uploaded final shapefile path)
-    final_shp_path = WORK_DIR / "output" / f"{spk}.shp"
-    if not final_shp_path.exists():
-        raise FileNotFoundError("Final shapefile not found for applyEdits.")
-
-    gdf = gpd.read_file(final_shp_path)
-    gdf = gdf.to_crs(epsg=3857)
-
-    adds = []
-    for idx, row in gdf.iterrows():
-        coords = list(row.geometry.coords)
-        adds.append({
-            "geometry": {
-                "paths": [coords],
-                "spatialReference": {"wkid": 102100, "latestWkid": 3857}
-            },
-            "attributes": {
-                "FlightID": row.get("FlightID", f"R{int(time.time() * 1000) + idx}"),
-                "DroneID": "1581F6BUB2456001G6K8",
-                "DroneCapacity": 25,
-                "SPKNumber": spk,
-                "KeyID": keyid,
-                "StartFlight": int(time.time() * 1000),
-                "EndFlight": int(time.time() * 1000 + 50000),
-                "ProcessedDate": int(time.time() * 1000),
-                "Height": row.get("Height", 2.5),
-                "Width": 4,
-                "Speed": row.get("Task_Flight_Speed", 5),
-                "TaskArea": row.get("Task_Area", 0),
-                "SprayAmount": row.get("TaskAmount", 0),
-                "VendorName": "",
-                "UserID": "agasha123",
-                "CRT_Date": int(time.time() * 1000)
-            }
-        })
-
-    payload = {
-        "f": "json",
-        "adds": json.dumps(adds)
-    }
-    response = requests.post(apply_url, data=payload, headers=headers)
-    try:
-        import streamlit as st
-        st.sidebar.info(f"📡 applyEdits POST: {apply_url}")
-        st.sidebar.write("🗂 Payload keys:", list(payload.keys()))
-        st.sidebar.write("📝 Payload 'adds' length:", len(payload['adds']))
-        st.sidebar.json(response.json())
-    except Exception:
-        pass
-    return response.json()
 import streamlit as st
 import zipfile
 import shutil
@@ -189,6 +132,57 @@ def upload_shapefile_to_server(zip_path: Path):
         return resp.json()
     else:
         raise RuntimeError(f"Upload failed: {resp.status_code} {resp.text}")
+
+def post_apply_edits_dynamic(upload_resp: dict):
+    token = get_final_token()
+    apply_url = f"{BASE_URL}/applyEdits?token={token}"
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+
+    # Build adds[] directly from upload response features
+    features = upload_resp.get("featureSet", {}).get("features", [])
+    adds = []
+    for feat in features:
+        adds.append({
+            "aggregateGeometries": None,
+            "geometry": feat["geometry"],
+            "symbol": None,
+            "attributes": {
+                "FlightID": feat["attributes"].get("Name"),
+                "DroneID": feat["attributes"].get("Flight_Con"),
+                "DroneCapacity": feat["attributes"].get("DroneCapacity", 25),
+                "SPKNumber": OUT_SPK,
+                "KeyID": OUT_KEYID,
+                "StartFlight": feat["attributes"].get("StartFlight", ""),
+                "EndFlight": feat["attributes"].get("EndFlight", ""),
+                "ProcessDate": int(time.time() * 1000),
+                "Height": feat["attributes"].get("Height", 0),
+                "Width": feat["attributes"].get("Route_Spac", 0),
+                "Speed": feat["attributes"].get("Task_Fligh", 0),
+                "TaskArea": feat["attributes"].get("Task_Area", 0),
+                "SprayAmount": feat["attributes"].get("Spray_amou", 0),
+                "VendorName": "PT SENTRA AGASHA NUSANTARA",
+                "UserID": os.getenv('GIS_USERNAME'),
+                "CRT_Date": int(time.time() * 1000),
+
+            }
+        })
+
+    payload = {
+        "f": "json",
+        "adds": json.dumps(adds)
+    }
+    response = requests.post(apply_url, data=payload, headers=headers)
+    try:
+        import streamlit as st
+        st.sidebar.info(f"📡 applyEdits POST: {apply_url}")
+        st.sidebar.write("🗂 Payload keys:", list(payload.keys()))
+        st.sidebar.write("📝 Payload 'adds' length:", len(payload['adds']))
+        st.sidebar.json(response.json())
+    except Exception:
+        pass
+    return response.json()
 
 # --- Page Configuration (must be first Streamlit command) ---
 st.set_page_config(page_title="Flight-Zone Selector & Exporter")
@@ -331,10 +325,10 @@ def handle_final_upload():
     if final_path.exists():
         with st.spinner("Uploading final shapefile ZIP..."):
             try:
-                result = upload_shapefile_to_server(final_path)
+                upload_result = upload_shapefile_to_server(final_path)
                 st.sidebar.success("✅ Uploaded successfully.")
-                st.json(result)
-                post_apply_edits_dynamic(OUT_SPK, OUT_KEYID)
+                st.json(upload_result)
+                post_apply_edits_dynamic(upload_result)
                 st.sidebar.success("✅ applyEdits call made.")
             except Exception as e:
                 st.sidebar.error(str(e))
@@ -462,11 +456,11 @@ if edited_zip:
             if st.button("📤 Upload Final ZIP to maps.sinarmasforestry.com"):
                 with st.spinner("Uploading final shapefile ZIP..."):
                     try:
-                        result = upload_shapefile_to_server(WORK_DIR / "final_upload.zip")
+                        upload_result = upload_shapefile_to_server(WORK_DIR / "final_upload.zip")
                         st.success("✅ Uploaded successfully.")
-                        st.json(result)
+                        st.json(upload_result)
                         # Apply edits dynamically after upload
-                        post_apply_edits_dynamic(OUT_SPK, OUT_KEYID)
+                        post_apply_edits_dynamic(upload_result)
                         st.sidebar.success("✅ applyEdits call made.")
                     except Exception as e:
                         st.error(str(e))
@@ -488,11 +482,11 @@ elif st.sidebar.button("Skip edit and generate final ZIP"):
             if st.button("📤 Upload Final ZIP to maps.sinarmasforestry.com"):
                 with st.spinner("Uploading final shapefile ZIP..."):
                     try:
-                        result = upload_shapefile_to_server(WORK_DIR / "final_upload.zip")
+                        upload_result = upload_shapefile_to_server(WORK_DIR / "final_upload.zip")
                         st.success("✅ Uploaded successfully.")
-                        st.json(result)
+                        st.json(upload_result)
                         # Apply edits dynamically after upload
-                        post_apply_edits_dynamic(OUT_SPK, OUT_KEYID)
+                        post_apply_edits_dynamic(upload_result)
                         st.sidebar.success("✅ applyEdits call made.")
                     except Exception as e:
                         st.error(str(e))
