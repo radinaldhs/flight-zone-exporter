@@ -167,10 +167,13 @@ with st.container():
             st.button("🗑️", help="Enter SPK number to enable delete", key="delete_disabled", disabled=True)
     with reset_col:
         if st.button("❌", help="Clear all inputs and restart", key="reset_button"):
-            for key in [
+            keys_to_clear = [
+                "zip_file", "excel_file", "edited_zip",
+                "OUT_SPK", "OUT_KEYID",
                 "show_delete_confirm", "delete_button", "reset_button",
                 "confirm_delete_button", "cancel_delete_button"
-            ]:
+            ]
+            for key in keys_to_clear:
                 if key in st.session_state:
                     del st.session_state[key]
             st.session_state.clear()
