@@ -318,44 +318,6 @@ if st.sidebar.button("5. Generate & Download Shapefile ZIP for QGIS Edit"):
             file_name=edit_zip.name
         )
 
-
-
-def handle_final_upload():
-    final_path = WORK_DIR / "final_upload.zip"
-    if not final_path.exists():
-        # Try generating it automatically if inputs are valid
-        if not (zip_file and excel_file and OUT_SPK and OUT_KEYID):
-            st.sidebar.error("Final upload ZIP not found. Please complete inputs or generate it manually.")
-        else:
-            ZIP_IN = WORK_DIR / "data.zip"
-            with open(ZIP_IN, 'wb') as f:
-                f.write(zip_file.getbuffer())
-            with zipfile.ZipFile(ZIP_IN, 'r') as zin:
-                zin.extractall(WORK_DIR)
-            merged = parse_kmls(WORK_DIR)
-            process_pipeline(merged)
-            final_path = WORK_DIR / "final_upload.zip"
-
-    if final_path.exists():
-        with st.spinner("Uploading final shapefile ZIP..."):
-            try:
-                upload_result = upload_shapefile_to_server(final_path)
-                st.sidebar.success("✅ Uploaded successfully.")
-                st.json(upload_result)
-                post_apply_edits_dynamic(upload_result)
-                st.sidebar.success("✅ applyEdits call made.")
-            except Exception as e:
-                st.sidebar.error(str(e))
-
-if st.sidebar.button("📤 Upload Final ZIP to maps.sinarmasforestry.com"):
-    handle_final_upload()
-
-st.markdown("---")
-
-# --- Step 6: Upload Edited Shapefile ZIP or Skip editing ---
-st.header("6. Upload Edited Shapefile ZIP (or skip editing)")
-edited_zip = st.file_uploader("Upload edited shapefile ZIP", type="zip")
-
 # --- Shared pipeline: Excel edit, join, export, zip ---
 def process_pipeline(merged):
     # prepare output folder
@@ -441,6 +403,42 @@ def process_pipeline(merged):
         data=open(ZIP_OUT,'rb').read(),
         file_name=ZIP_OUT.name
     )
+
+def handle_final_upload():
+    final_path = WORK_DIR / "final_upload.zip"
+    if not final_path.exists():
+        # Try generating it automatically if inputs are valid
+        if not (zip_file and excel_file and OUT_SPK and OUT_KEYID):
+            st.sidebar.error("Final upload ZIP not found. Please complete inputs or generate it manually.")
+        else:
+            ZIP_IN = WORK_DIR / "data.zip"
+            with open(ZIP_IN, 'wb') as f:
+                f.write(zip_file.getbuffer())
+            with zipfile.ZipFile(ZIP_IN, 'r') as zin:
+                zin.extractall(WORK_DIR)
+            merged = parse_kmls(WORK_DIR)
+            process_pipeline(merged)
+            final_path = WORK_DIR / "final_upload.zip"
+
+    if final_path.exists():
+        with st.spinner("Uploading final shapefile ZIP..."):
+            try:
+                upload_result = upload_shapefile_to_server(final_path)
+                st.sidebar.success("✅ Uploaded successfully.")
+                st.json(upload_result)
+                post_apply_edits_dynamic(upload_result)
+                st.sidebar.success("✅ applyEdits call made.")
+            except Exception as e:
+                st.sidebar.error(str(e))
+
+if st.sidebar.button("📤 Upload Final ZIP to maps.sinarmasforestry.com"):
+    handle_final_upload()
+
+st.markdown("---")
+
+# --- Step 6: Upload Edited Shapefile ZIP or Skip editing ---
+st.header("6. Upload Edited Shapefile ZIP (or skip editing)")
+edited_zip = st.file_uploader("Upload edited shapefile ZIP", type="zip")
 
 
 # --- Execute pipeline based on user action ---
