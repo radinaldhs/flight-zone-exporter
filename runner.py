@@ -464,7 +464,7 @@ if edited_zip:
                         st.json(upload_result)
                         # Apply edits dynamically after upload
                         post_apply_edits_dynamic(upload_result)
-                        st.success("✅ applyEdits call made.")
+                        st.sidebar.success("✅ applyEdits call made.")
                     except Exception as e:
                         st.error(str(e))
 elif st.sidebar.button("Skip edit and generate final ZIP"):
@@ -490,7 +490,7 @@ elif st.sidebar.button("Skip edit and generate final ZIP"):
                         st.json(upload_result)
                         # Apply edits dynamically after upload
                         post_apply_edits_dynamic(upload_result)
-                        st.success("✅ applyEdits call made.")
+                        st.sidebar.success("✅ applyEdits call made.")
                     except Exception as e:
                         st.error(str(e))
 
