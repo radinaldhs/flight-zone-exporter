@@ -191,13 +191,9 @@ def post_apply_edits_dynamic(upload_resp: dict):
 
 
     response = requests.post(apply_url, data=payload, headers=headers)
-    st.write("🔄 applyEdits response status:", response.status_code)
-    st.write("Headers:", response.headers)
 
     try:
-        st.write("🗂 Payload keys:", list(payload.keys()))
-        st.write('Payload adds:', json.dumps(adds, indent=2))
-        st.json(response.json())
+        st.write("Response status code:", response.status_code)
     except Exception:
         pass
     return response.json()
@@ -479,7 +475,7 @@ if edited_zip:
                         st.json(upload_result)
                         # Apply edits dynamically after upload
                         post_apply_edits_dynamic(upload_result)
-                        st.sidebar.success("✅ applyEdits call made.")
+                        st.success("✅ applyEdits call made.")
                     except Exception as e:
                         st.error(str(e))
 elif st.sidebar.button("Skip edit and generate final ZIP"):
