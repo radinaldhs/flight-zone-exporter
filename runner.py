@@ -144,6 +144,7 @@ def post_apply_edits_dynamic(upload_resp: dict):
     features = upload_resp.get("featureSet", {}).get("features", [])
     adds = []
     for feat in features:
+        print(f"Processing feature: {feat}")
         adds.append({
             "aggregateGeometries": None,
             "geometry": feat["geometry"],
