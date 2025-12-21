@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Development
+.git/
+.gitignore
+*.md
+!API_README.md
+
+# Data
+working/
+final_upload.zip
+zones_for_edit.zip
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Old Streamlit app (optional - remove if you want to keep it)
+# runner.py
+# .streamlit/
