@@ -39,6 +39,9 @@ app.add_middleware(
 )
 
 # Include routers
+from app.api.routes import auth
+
+app.include_router(auth.router, prefix="/api/auth")
 app.include_router(health.router, prefix="/api")
 app.include_router(arcgis.router, prefix="/api/arcgis")
 app.include_router(kml.router, prefix="/api/kml")

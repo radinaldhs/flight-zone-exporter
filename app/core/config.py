@@ -10,12 +10,30 @@ class Settings(BaseSettings):
     VERSION: str = "2.0.0"
     DEBUG: bool = False
 
+    # Security
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production-min-32-chars")
+
     # ArcGIS Configuration
-    ARCGIS_BASE_URL: str = "https://maps.sinarmasforestry.com/arcgis/rest/services/PreFo/DroneSprayingVendor/FeatureServer/0"
-    ARCGIS_SERVER_URL: str = "https://maps.sinarmasforestry.com/arcgis/rest/services/PreFo/DroneSprayingVendor/MapServer"
-    ARCGIS_TOKEN_URL: str = "https://maps.sinarmasforestry.com/portal/sharing/rest/generateToken"
-    ARCGIS_UPLOAD_URL: str = "https://maps.sinarmasforestry.com/portal/sharing/rest/content/features/generate"
-    ARCGIS_REFERER: str = "https://maps.sinarmasforestry.com/UploadDroneManagements/"
+    ARCGIS_BASE_URL: str = os.getenv(
+        "ARCGIS_BASE_URL",
+        "https://maps.sinarmasforestry.com/arcgis/rest/services/PreFo/DroneSprayingVendor/FeatureServer/0"
+    )
+    ARCGIS_SERVER_URL: str = os.getenv(
+        "ARCGIS_SERVER_URL",
+        "https://maps.sinarmasforestry.com/arcgis/rest/services/PreFo/DroneSprayingVendor/MapServer"
+    )
+    ARCGIS_TOKEN_URL: str = os.getenv(
+        "ARCGIS_TOKEN_URL",
+        "https://maps.sinarmasforestry.com/portal/sharing/rest/generateToken"
+    )
+    ARCGIS_UPLOAD_URL: str = os.getenv(
+        "ARCGIS_UPLOAD_URL",
+        "https://maps.sinarmasforestry.com/portal/sharing/rest/content/features/generate"
+    )
+    ARCGIS_REFERER: str = os.getenv(
+        "ARCGIS_REFERER",
+        "https://maps.sinarmasforestry.com/UploadDroneManagements/"
+    )
 
     # ArcGIS Credentials
     GIS_AUTH_USERNAME: str = os.getenv("GIS_AUTH_USERNAME", "")

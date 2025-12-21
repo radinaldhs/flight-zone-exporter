@@ -14,11 +14,12 @@ from app.core.exceptions import (
 
 
 class ArcGISService:
-    def __init__(self):
+    def __init__(self, gis_credentials: dict = None):
         self.base_url = settings.ARCGIS_BASE_URL
         self.server_url = settings.ARCGIS_SERVER_URL
         self.token_url = settings.ARCGIS_TOKEN_URL
         self.upload_url = settings.ARCGIS_UPLOAD_URL
+        self.gis_credentials = gis_credentials or {}
         self.token_headers = {
             'Content-Type': 'application/x-www-form-urlencoded',
             'Referer': settings.ARCGIS_REFERER,
@@ -31,11 +32,17 @@ class ArcGISService:
     def get_token(self) -> str:
         session = requests.Session()
 
+        # Get credentials from user or fallback to settings
+        gis_auth_username = self.gis_credentials.get('GIS_AUTH_USERNAME', settings.GIS_AUTH_USERNAME)
+        gis_auth_password = self.gis_credentials.get('GIS_AUTH_PASSWORD', settings.GIS_AUTH_PASSWORD)
+        gis_username = self.gis_credentials.get('GIS_USERNAME', settings.GIS_USERNAME)
+        gis_password = self.gis_credentials.get('GIS_PASSWORD', settings.GIS_PASSWORD)
+
         # Step 1: Initial authentication
         step1 = session.post(self.token_url, headers=self.token_headers, data={
             'request': 'getToken',
-            'username': settings.GIS_AUTH_USERNAME,
-            'password': settings.GIS_AUTH_PASSWORD,
+            'username': gis_auth_username,
+            'password': gis_auth_password,
             'expiration': '60',
             'referer': 'https://maps.sinarmasforestry.com',
             'f': 'json'
@@ -61,8 +68,8 @@ class ArcGISService:
         # Step 3: Final authentication
         step3 = session.post(self.token_url, headers=self.token_headers, data={
             'request': 'getToken',
-            'username': settings.GIS_USERNAME,
-            'password': settings.GIS_PASSWORD,
+            'username': gis_username,
+            'password': gis_password,
             'expiration': '60',
             'referer': 'https://maps.sinarmasforestry.com',
             'f': 'json'
