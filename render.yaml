@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: flight-zone-exporter-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GIS_AUTH_USERNAME
+        sync: false
+      - key: GIS_AUTH_PASSWORD
+        sync: false
+      - key: GIS_USERNAME
+        sync: false
+      - key: GIS_PASSWORD
+        sync: false
+      - key: CORS_ORIGINS
+        value: "*"
