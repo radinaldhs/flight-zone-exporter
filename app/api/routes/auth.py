@@ -13,7 +13,6 @@ async def register(user_create: UserCreate):
     """
     Register a new user with GIS credentials.
 
-    - **email**: User's email address
     - **username**: Username (3-50 characters)
     - **password**: User password (min 6 characters)
     - **full_name**: Optional full name
@@ -27,12 +26,11 @@ async def register(user_create: UserCreate):
         user = UserService.create_user(user_create)
 
         # Create access token
-        access_token = create_access_token(data={"sub": user.id, "email": user.email})
+        access_token = create_access_token(data={"sub": user.id, "username": user.username})
 
         # Return user without sensitive data
         user_response = User(
             id=user.id,
-            email=user.email,
             username=user.username,
             full_name=user.full_name,
             is_active=user.is_active,
@@ -55,26 +53,25 @@ async def register(user_create: UserCreate):
 @router.post("/login", response_model=UserResponse, tags=["Authentication"])
 async def login(user_login: UserLogin):
     """
-    Login with email and password.
+    Login with username and password.
 
     Returns access token and user information.
     """
-    user = UserService.authenticate_user(user_login.email, user_login.password)
+    user = UserService.authenticate_user(user_login.username, user_login.password)
 
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
     # Create access token
-    access_token = create_access_token(data={"sub": user.id, "email": user.email})
+    access_token = create_access_token(data={"sub": user.id, "username": user.username})
 
     # Return user without sensitive data
     user_response = User(
         id=user.id,
-        email=user.email,
         username=user.username,
         full_name=user.full_name,
         is_active=user.is_active,
@@ -95,7 +92,6 @@ async def get_current_user_info(current_user: UserInDB = Depends(get_current_act
     """
     return User(
         id=current_user.id,
-        email=current_user.email,
         username=current_user.username,
         full_name=current_user.full_name,
         is_active=current_user.is_active,

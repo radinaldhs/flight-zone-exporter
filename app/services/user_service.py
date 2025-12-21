@@ -25,11 +25,11 @@ class UserService:
             json.dump(users, f, indent=2, default=str)
 
     @staticmethod
-    def get_user_by_email(email: str) -> Optional[UserInDB]:
+    def get_user_by_username(username: str) -> Optional[UserInDB]:
         users = UserService._load_users()
 
         for user_id, user_data in users.items():
-            if user_data.get('email') == email:
+            if user_data.get('username') == username:
                 return UserInDB(**user_data)
 
         return None
@@ -49,14 +49,13 @@ class UserService:
         users = UserService._load_users()
 
         # Check if user already exists
-        if UserService.get_user_by_email(user_create.email):
-            raise ValueError("User with this email already exists")
+        if UserService.get_user_by_username(user_create.username):
+            raise ValueError("User with this username already exists")
 
         # Create new user
         user_id = str(uuid.uuid4())
         user_data = {
             "id": user_id,
-            "email": user_create.email,
             "username": user_create.username,
             "full_name": user_create.full_name,
             "hashed_password": get_password_hash(user_create.password),
@@ -74,8 +73,8 @@ class UserService:
         return UserInDB(**user_data)
 
     @staticmethod
-    def authenticate_user(email: str, password: str) -> Optional[UserInDB]:
-        user = UserService.get_user_by_email(email)
+    def authenticate_user(username: str, password: str) -> Optional[UserInDB]:
+        user = UserService.get_user_by_username(username)
 
         if not user:
             return None
