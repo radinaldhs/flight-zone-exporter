@@ -13,25 +13,23 @@ async def register(user_create: UserCreate):
     """
     Register a new user with GIS credentials.
 
-    - **username**: Username (3-50 characters)
-    - **password**: User password (min 6 characters)
-    - **full_name**: Optional full name
-    - **gis_auth_username**: ArcGIS auth username
-    - **gis_auth_password**: ArcGIS auth password
+    - **gis_auth_username**: ArcGIS auth username (also used for login)
+    - **gis_auth_password**: ArcGIS auth password (also used for login)
     - **gis_username**: GIS username
     - **gis_password**: GIS password
+    - **full_name**: Optional full name
     """
     try:
         # Create user
         user = UserService.create_user(user_create)
 
         # Create access token
-        access_token = create_access_token(data={"sub": user.id, "username": user.username})
+        access_token = create_access_token(data={"sub": user.id, "gis_auth_username": user.gis_auth_username})
 
         # Return user without sensitive data
         user_response = User(
             id=user.id,
-            username=user.username,
+            gis_auth_username=user.gis_auth_username,
             full_name=user.full_name,
             is_active=user.is_active,
             created_at=user.created_at
@@ -53,26 +51,26 @@ async def register(user_create: UserCreate):
 @router.post("/login", response_model=UserResponse, tags=["Authentication"])
 async def login(user_login: UserLogin):
     """
-    Login with username and password.
+    Login with GIS Auth username and password.
 
     Returns access token and user information.
     """
-    user = UserService.authenticate_user(user_login.username, user_login.password)
+    user = UserService.authenticate_user(user_login.gis_auth_username, user_login.gis_auth_password)
 
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail="Incorrect GIS Auth credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
     # Create access token
-    access_token = create_access_token(data={"sub": user.id, "username": user.username})
+    access_token = create_access_token(data={"sub": user.id, "gis_auth_username": user.gis_auth_username})
 
     # Return user without sensitive data
     user_response = User(
         id=user.id,
-        username=user.username,
+        gis_auth_username=user.gis_auth_username,
         full_name=user.full_name,
         is_active=user.is_active,
         created_at=user.created_at
@@ -92,7 +90,7 @@ async def get_current_user_info(current_user: UserInDB = Depends(get_current_act
     """
     return User(
         id=current_user.id,
-        username=current_user.username,
+        gis_auth_username=current_user.gis_auth_username,
         full_name=current_user.full_name,
         is_active=current_user.is_active,
         created_at=current_user.created_at

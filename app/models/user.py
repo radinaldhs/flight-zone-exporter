@@ -4,21 +4,19 @@ from datetime import datetime
 
 
 class UserBase(BaseModel):
-    username: str = Field(..., min_length=3, max_length=50)
+    gis_auth_username: str = Field(..., max_length=100)
     full_name: Optional[str] = None
 
 
 class UserCreate(UserBase):
-    password: str = Field(..., min_length=6)
-    gis_auth_username: str
-    gis_auth_password: str
-    gis_username: str
-    gis_password: str
+    gis_auth_password: str = Field(..., max_length=72)
+    gis_username: str = Field(..., max_length=100)
+    gis_password: str = Field(..., max_length=72)
 
 
 class UserLogin(BaseModel):
-    username: str
-    password: str
+    gis_auth_username: str
+    gis_auth_password: str
 
 
 class User(UserBase):
@@ -31,9 +29,8 @@ class User(UserBase):
 
 
 class UserInDB(User):
-    hashed_password: str
-    gis_auth_username: str
-    gis_auth_password: str
+    hashed_gis_auth_password: str
+    gis_auth_password: str  # Plain password for ArcGIS operations
     gis_username: str
     gis_password: str
 
