@@ -10,8 +10,6 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     gis_auth_password: str = Field(..., max_length=72)
-    gis_username: str = Field(..., max_length=100)
-    gis_password: str = Field(..., max_length=72)
 
 
 class UserLogin(BaseModel):
@@ -31,8 +29,6 @@ class User(UserBase):
 class UserInDB(User):
     hashed_gis_auth_password: str
     gis_auth_password: str  # Plain password for ArcGIS operations
-    gis_username: str
-    gis_password: str
 
 
 class Token(BaseModel):

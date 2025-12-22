@@ -11,6 +11,9 @@ python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-dateutil==2.9.0.post0
 
+# Firebase
+firebase-admin==6.5.0
+
 # Data processing
 pandas==2.3.1
 numpy==2.0.2

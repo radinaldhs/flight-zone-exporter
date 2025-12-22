@@ -5,6 +5,9 @@ __pycache__/
 .env
 .venv/
 
+# Firebase
+firebase-service-account.json
+
 # Streamlit / data
 working/
 final_upload.zip

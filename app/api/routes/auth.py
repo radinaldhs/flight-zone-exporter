@@ -11,13 +11,13 @@ router = APIRouter()
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED, tags=["Authentication"])
 async def register(user_create: UserCreate):
     """
-    Register a new user with GIS credentials.
+    Register a new user with GIS Auth credentials.
 
-    - **gis_auth_username**: ArcGIS auth username (also used for login)
-    - **gis_auth_password**: ArcGIS auth password (also used for login)
-    - **gis_username**: GIS username
-    - **gis_password**: GIS password
+    - **gis_auth_username**: ArcGIS auth username (used for login and ArcGIS operations)
+    - **gis_auth_password**: ArcGIS auth password (used for login and ArcGIS operations)
     - **full_name**: Optional full name
+
+    Note: GIS Username and Password (fmiseditor) are shared system credentials stored in .env
     """
     try:
         # Create user

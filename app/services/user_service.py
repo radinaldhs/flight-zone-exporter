@@ -1,53 +1,56 @@
-import json
 import uuid
-from pathlib import Path
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Optional
 from app.models.user import UserCreate, UserInDB, User
 from app.core.security import get_password_hash, verify_password
-
-# Simple file-based storage (can be replaced with database later)
-USERS_FILE = Path("users.json")
+from app.core.firebase import get_firestore_client
 
 
 class UserService:
     @staticmethod
-    def _load_users() -> Dict[str, dict]:
-        if not USERS_FILE.exists():
-            return {}
-
-        with open(USERS_FILE, 'r') as f:
-            return json.load(f)
-
-    @staticmethod
-    def _save_users(users: Dict[str, dict]):
-        with open(USERS_FILE, 'w') as f:
-            json.dump(users, f, indent=2, default=str)
+    def _get_users_collection():
+        """Get Firestore users collection reference."""
+        db = get_firestore_client()
+        return db.collection('users')
 
     @staticmethod
     def get_user_by_gis_auth_username(gis_auth_username: str) -> Optional[UserInDB]:
-        users = UserService._load_users()
+        """Get user by GIS auth username."""
+        try:
+            users_ref = UserService._get_users_collection()
+            query = users_ref.where('gis_auth_username', '==', gis_auth_username).limit(1)
+            docs = query.stream()
 
-        for user_id, user_data in users.items():
-            if user_data.get('gis_auth_username') == gis_auth_username:
+            for doc in docs:
+                user_data = doc.to_dict()
+                user_data['id'] = doc.id
                 return UserInDB(**user_data)
 
-        return None
+            return None
+        except Exception as e:
+            print(f"Error getting user by username: {e}")
+            return None
 
     @staticmethod
     def get_user_by_id(user_id: str) -> Optional[UserInDB]:
-        users = UserService._load_users()
-        user_data = users.get(user_id)
+        """Get user by ID."""
+        try:
+            users_ref = UserService._get_users_collection()
+            doc = users_ref.document(user_id).get()
 
-        if user_data:
-            return UserInDB(**user_data)
+            if doc.exists:
+                user_data = doc.to_dict()
+                user_data['id'] = doc.id
+                return UserInDB(**user_data)
 
-        return None
+            return None
+        except Exception as e:
+            print(f"Error getting user by ID: {e}")
+            return None
 
     @staticmethod
     def create_user(user_create: UserCreate) -> UserInDB:
-        users = UserService._load_users()
-
+        """Create a new user."""
         # Check if user already exists
         if UserService.get_user_by_gis_auth_username(user_create.gis_auth_username):
             raise ValueError("User with this GIS Auth Username already exists")
@@ -55,24 +58,30 @@ class UserService:
         # Create new user
         user_id = str(uuid.uuid4())
         user_data = {
-            "id": user_id,
             "gis_auth_username": user_create.gis_auth_username,
             "full_name": user_create.full_name,
             "hashed_gis_auth_password": get_password_hash(user_create.gis_auth_password),
             "gis_auth_password": user_create.gis_auth_password,  # Store plain for ArcGIS
-            "gis_username": user_create.gis_username,
-            "gis_password": user_create.gis_password,
             "is_active": True,
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.utcnow()
         }
 
-        users[user_id] = user_data
-        UserService._save_users(users)
+        try:
+            # Store in Firestore
+            users_ref = UserService._get_users_collection()
+            users_ref.document(user_id).set(user_data)
 
-        return UserInDB(**user_data)
+            # Return UserInDB object
+            user_data['id'] = user_id
+            user_data['created_at'] = user_data['created_at'].isoformat()
+            return UserInDB(**user_data)
+        except Exception as e:
+            print(f"Error creating user: {e}")
+            raise ValueError(f"Failed to create user: {str(e)}")
 
     @staticmethod
     def authenticate_user(gis_auth_username: str, gis_auth_password: str) -> Optional[UserInDB]:
+        """Authenticate user with GIS auth credentials."""
         user = UserService.get_user_by_gis_auth_username(gis_auth_username)
 
         if not user:
@@ -85,6 +94,8 @@ class UserService:
 
     @staticmethod
     def get_user_gis_credentials(user_id: str) -> Optional[dict]:
+        """Get user's GIS credentials for ArcGIS operations."""
+        from app.core.config import settings
         user = UserService.get_user_by_id(user_id)
 
         if not user:
@@ -93,6 +104,6 @@ class UserService:
         return {
             "GIS_AUTH_USERNAME": user.gis_auth_username,
             "GIS_AUTH_PASSWORD": user.gis_auth_password,  # Plain password for ArcGIS
-            "GIS_USERNAME": user.gis_username,
-            "GIS_PASSWORD": user.gis_password
+            "GIS_USERNAME": settings.GIS_USERNAME,  # From .env - shared credential
+            "GIS_PASSWORD": settings.GIS_PASSWORD   # From .env - shared credential
         }
