@@ -29,6 +29,43 @@ class ArcGISService:
             'sec-ch-ua-mobile': '?0',
         }
 
+    @staticmethod
+    def validate_gis_auth_credentials(username: str, password: str) -> bool:
+        """
+        Validate GIS Auth credentials against ArcGIS server.
+        Returns True if credentials are valid, False otherwise.
+        """
+        try:
+            session = requests.Session()
+            token_headers = {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Referer': settings.ARCGIS_REFERER,
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+            }
+
+            # Attempt to authenticate with provided credentials
+            response = session.post(settings.ARCGIS_TOKEN_URL, headers=token_headers, data={
+                'request': 'getToken',
+                'username': username,
+                'password': password,
+                'expiration': '60',
+                'referer': 'https://maps.sinarmasforestry.com',
+                'f': 'json'
+            })
+
+            result = response.json()
+
+            # Check if token was successfully generated
+            if result.get('token'):
+                return True
+
+            # If there's an error in the response, credentials are invalid
+            return False
+
+        except Exception as e:
+            print(f"Error validating GIS Auth credentials: {e}")
+            return False
+
     def get_token(self) -> str:
         session = requests.Session()
 

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from app.models.user import UserCreate, UserLogin, UserResponse, User, Token
 from app.services.user_service import UserService
+from app.services.arcgis_service import ArcGISService
 from app.core.security import create_access_token
 from app.core.dependencies import get_current_active_user
 from app.models.user import UserInDB
@@ -17,9 +18,22 @@ async def register(user_create: UserCreate):
     - **gis_auth_password**: ArcGIS auth password (used for login and ArcGIS operations)
     - **full_name**: Optional full name
 
-    Note: GIS Username and Password (fmiseditor) are shared system credentials stored in .env
+    Note: Credentials are validated against maps.sinarmasforestry.com ArcGIS server.
+    You must use your EXISTING GIS Auth credentials from the ArcGIS portal.
     """
     try:
+        # Validate GIS Auth credentials with ArcGIS server
+        is_valid = ArcGISService.validate_gis_auth_credentials(
+            user_create.gis_auth_username,
+            user_create.gis_auth_password
+        )
+
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid GIS Auth credentials. Please use your existing credentials from maps.sinarmasforestry.com"
+            )
+
         # Create user
         user = UserService.create_user(user_create)
 
@@ -41,6 +55,8 @@ async def register(user_create: UserCreate):
             token_type="bearer"
         )
 
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
