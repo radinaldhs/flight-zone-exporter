@@ -24,6 +24,11 @@ class UserService:
             for doc in docs:
                 user_data = doc.to_dict()
                 user_data['id'] = doc.id
+
+                # Convert Firestore Timestamp to datetime if needed
+                if 'created_at' in user_data and hasattr(user_data['created_at'], 'seconds'):
+                    user_data['created_at'] = datetime.fromtimestamp(user_data['created_at'].seconds)
+
                 return UserInDB(**user_data)
 
             return None
@@ -41,6 +46,11 @@ class UserService:
             if doc.exists:
                 user_data = doc.to_dict()
                 user_data['id'] = doc.id
+
+                # Convert Firestore Timestamp to datetime if needed
+                if 'created_at' in user_data and hasattr(user_data['created_at'], 'seconds'):
+                    user_data['created_at'] = datetime.fromtimestamp(user_data['created_at'].seconds)
+
                 return UserInDB(**user_data)
 
             return None
