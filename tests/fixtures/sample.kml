@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml>
+  <Document>
+    <name>Test Flight Zones</name>
+    <Placemark>
+      <name>Zone_001</name>
+      <ExtendedData>
+        <Data name="Flight_Con">
+          <value>DRONE_001</value>
+        </Data>
+        <Data name="Height">
+          <value>50</value>
+        </Data>
+        <Data name="Route_Spacing">
+          <value>5</value>
+        </Data>
+        <Data name="Task_Flight_Speed">
+          <value>10</value>
+        </Data>
+        <Data name="Task_Area">
+          <value>100</value>
+        </Data>
+        <Data name="Flight_Time">
+          <value>30</value>
+        </Data>
+        <Data name="Spray_amount">
+          <value>15</value>
+        </Data>
+      </ExtendedData>
+      <LineString>
+        <coordinates>
+          106.816666,-6.200000,0
+          106.816777,-6.200111,0
+          106.816888,-6.200000,0
+        </coordinates>
+      </LineString>
+    </Placemark>
+    <Placemark>
+      <name>Zone_002</name>
+      <ExtendedData>
+        <Data name="Flight_Con">
+          <value>DRONE_002</value>
+        </Data>
+        <Data name="Height">
+          <value>60</value>
+        </Data>
+        <Data name="Route_Spacing">
+          <value>6</value>
+        </Data>
+        <Data name="Task_Flight_Speed">
+          <value>12</value>
+        </Data>
+        <Data name="Task_Area">
+          <value>120</value>
+        </Data>
+        <Data name="Flight_Time">
+          <value>35</value>
+        </Data>
+        <Data name="Spray_amount">
+          <value>18</value>
+        </Data>
+      </ExtendedData>
+      <LineString>
+        <coordinates>
+          106.817000,-6.201000,0
+          106.817111,-6.201111,0
+          106.817222,-6.201000,0
+        </coordinates>
+      </LineString>
+    </Placemark>
+  </Document>
+</kml>

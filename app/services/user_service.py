@@ -71,7 +71,6 @@ class UserService:
             "gis_auth_username": user_create.gis_auth_username,
             "full_name": user_create.full_name,
             "hashed_gis_auth_password": get_password_hash(user_create.gis_auth_password),
-            "gis_auth_password": user_create.gis_auth_password,  # Store plain for ArcGIS
             "is_active": True,
             "created_at": datetime.utcnow()
         }
@@ -104,16 +103,16 @@ class UserService:
 
     @staticmethod
     def get_user_gis_credentials(user_id: str) -> Optional[dict]:
-        """Get user's GIS credentials for ArcGIS operations."""
+        """Get shared GIS credentials for ArcGIS operations from environment variables."""
         from app.core.config import settings
         user = UserService.get_user_by_id(user_id)
 
         if not user:
             return None
 
+        # Return ONLY shared credentials from .env for ArcGIS operations
+        # User's GIS_AUTH credentials are only for app authentication, NOT for ArcGIS
         return {
-            "GIS_AUTH_USERNAME": user.gis_auth_username,
-            "GIS_AUTH_PASSWORD": user.gis_auth_password,  # Plain password for ArcGIS
-            "GIS_USERNAME": settings.GIS_USERNAME,  # From .env - shared credential
-            "GIS_PASSWORD": settings.GIS_PASSWORD   # From .env - shared credential
+            "GIS_USERNAME": settings.GIS_USERNAME,  # fmiseditor from .env
+            "GIS_PASSWORD": settings.GIS_PASSWORD   # 987!@#EditorPass!@#321 from .env
         }

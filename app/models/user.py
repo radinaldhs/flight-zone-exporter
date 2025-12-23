@@ -4,12 +4,12 @@ from datetime import datetime
 
 
 class UserBase(BaseModel):
-    gis_auth_username: str = Field(..., max_length=100)
+    gis_auth_username: str = Field(..., max_length=100, description="Your Sinarmas ArcGIS portal username")
     full_name: Optional[str] = None
 
 
 class UserCreate(UserBase):
-    gis_auth_password: str = Field(..., max_length=72)
+    gis_auth_password: str = Field(..., max_length=72, description="Your Sinarmas ArcGIS portal password")
 
 
 class UserLogin(BaseModel):
@@ -28,7 +28,6 @@ class User(UserBase):
 
 class UserInDB(User):
     hashed_gis_auth_password: str
-    gis_auth_password: str  # Plain password for ArcGIS operations
 
 
 class Token(BaseModel):
