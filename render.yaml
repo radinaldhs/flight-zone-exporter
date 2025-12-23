@@ -6,6 +6,8 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
       - key: GIS_AUTH_USERNAME
         sync: false
       - key: GIS_AUTH_PASSWORD
@@ -13,6 +15,8 @@ services:
       - key: GIS_USERNAME
         sync: false
       - key: GIS_PASSWORD
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
         sync: false
       - key: CORS_ORIGINS
         value: "*"
