@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from fastapi.responses import FileResponse
 from pathlib import Path
 import shutil
@@ -10,11 +10,13 @@ from app.models.schemas import (
     UploadToArcGISResponse,
     KMLMetadata
 )
+from app.models.user import UserInDB
 from app.services.kml_parser import KMLParser
 from app.services.shapefile_service import ShapefileService
 from app.services.arcgis_service import ArcGISService
 from app.utils.file_utils import FileUtils
 from app.core.exceptions import InvalidFileFormatError
+from app.core.dependencies import get_current_active_subscriber
 
 router = APIRouter()
 
@@ -23,6 +25,7 @@ router = APIRouter()
 async def generate_shapefile_for_edit(
     kml_zip: UploadFile = File(..., description="KML ZIP file"),
     spk_number: str = Form(..., description="SPK number"),
+    current_user: UserInDB = Depends(get_current_active_subscriber)
 ):
     if not FileUtils.validate_file_extension(kml_zip.filename, ['.zip']):
         raise InvalidFileFormatError("File must be a ZIP archive")
@@ -61,7 +64,9 @@ async def generate_shapefile_for_edit(
 
 
 @router.get("/download/shapefile-for-edit", tags=["Processing"])
-async def download_shapefile_for_edit():
+async def download_shapefile_for_edit(
+    current_user: UserInDB = Depends(get_current_active_subscriber)
+):
     file_path = Path("zones_for_edit.zip")
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found. Generate shapefile first.")
@@ -79,7 +84,8 @@ async def process_complete_workflow(
     excel_file: UploadFile = File(..., description="Excel file with flight records"),
     spk_number: str = Form(..., description="SPK number"),
     key_id: str = Form(..., description="Key ID"),
-    edited_shapefile: UploadFile = File(None, description="Optional: edited shapefile ZIP from QGIS")
+    edited_shapefile: UploadFile = File(None, description="Optional: edited shapefile ZIP from QGIS"),
+    current_user: UserInDB = Depends(get_current_active_subscriber)
 ):
     if not FileUtils.validate_file_extension(kml_zip.filename, ['.zip']):
         raise InvalidFileFormatError("KML file must be a ZIP archive")
@@ -135,7 +141,9 @@ async def process_complete_workflow(
 
 
 @router.get("/download/final-upload", tags=["Processing"])
-async def download_final_upload():
+async def download_final_upload(
+    current_user: UserInDB = Depends(get_current_active_subscriber)
+):
     file_path = Path("final_upload.zip")
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found. Process workflow first.")
@@ -151,7 +159,8 @@ async def download_final_upload():
 async def upload_to_arcgis(
     spk_number: str = Form(..., description="SPK number"),
     key_id: str = Form(..., description="Key ID"),
-    final_zip: UploadFile = File(None, description="Optional: final upload ZIP (if not using pre-generated)")
+    final_zip: UploadFile = File(None, description="Optional: final upload ZIP (if not using pre-generated)"),
+    current_user: UserInDB = Depends(get_current_active_subscriber)
 ):
     work_dir = FileUtils.get_work_dir()
 
