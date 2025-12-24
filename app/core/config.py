@@ -52,6 +52,19 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: list = ["*"]
 
+    # Payment Configuration (Midtrans)
+    MIDTRANS_IS_PRODUCTION: bool = os.getenv("MIDTRANS_IS_PRODUCTION", "false").lower() == "true"
+    MIDTRANS_SERVER_KEY: str = os.getenv("MIDTRANS_SERVER_KEY", "SB-Mid-server-vbHVLOOTdUsat7D3thUsrBGx")
+    MIDTRANS_CLIENT_KEY: str = os.getenv("MIDTRANS_CLIENT_KEY", "SB-Mid-client-_wlfBv2oixD5wtrv")
+    MIDTRANS_MERCHANT_ID: str = os.getenv("MIDTRANS_MERCHANT_ID", "G162653928")
+
+    # Subscription Configuration
+    MONTHLY_SUBSCRIPTION_PRICE: int = int(os.getenv("MONTHLY_SUBSCRIPTION_PRICE", "4000000"))  # IDR
+    SUBSCRIPTION_GRACE_PERIOD_DAYS: int = int(os.getenv("SUBSCRIPTION_GRACE_PERIOD_DAYS", "3"))
+
+    # Whitelist (Free Tier Users)
+    FREE_TIER_USERS: list = ["agasha123"]  # Marketing partner
+
     class Config:
         env_file = ".env"
         case_sensitive = True
