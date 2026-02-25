@@ -208,8 +208,9 @@ class ArcGISService:
             start_flight = feat["attributes"].get("StartFlight", "")
             end_flight = feat["attributes"].get("EndFlight", "")
 
-            start_timestamp = 0
-            end_timestamp = 0
+            now_ms = int(time.time() * 1000)
+            start_timestamp = now_ms
+            end_timestamp = now_ms
 
             if start_flight:
                 try:
