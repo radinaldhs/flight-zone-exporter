@@ -74,7 +74,7 @@ class ShapefileService:
             with pd.ExcelWriter(excel_path, engine='openpyxl', mode='a', if_sheet_exists='replace') as w:
                 df_summary.to_excel(w, sheet_name='Sheet1', index=False)
 
-            return merged_filtered
+            return merged_filtered, df_summary
 
         except Exception as e:
             raise FileProcessingError(f"Excel processing failed: {str(e)}")

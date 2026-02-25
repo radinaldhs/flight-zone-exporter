@@ -205,7 +205,7 @@ class ArcGISService:
 
         adds = []
         for feat in features:
-            start_flight = feat["attributes"].get("StartFlight", "")
+            start_flight = feat["attributes"].get("StarFlight", "")
             end_flight = feat["attributes"].get("EndFlight", "")
 
             now_ms = int(time.time() * 1000)

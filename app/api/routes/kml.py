@@ -108,12 +108,7 @@ async def process_complete_workflow(
 
         # Process Excel and create final shapefile
         shapefile_service = ShapefileService()
-        filtered_gdf = shapefile_service.process_excel(excel_path, merged_gdf, spk_number, key_id)
-
-        # Build summary for final shapefile
-        df_summary = pd.DataFrame({'Name': filtered_gdf['Name']})
-        df_summary['SPKNumber'] = spk_number
-        df_summary['KeyID'] = key_id
+        filtered_gdf, df_summary = shapefile_service.process_excel(excel_path, merged_gdf, spk_number, key_id)
 
         # Create final shapefile ZIP
         final_zip = shapefile_service.create_final_shapefile(filtered_gdf, df_summary, spk_number, work_dir)
