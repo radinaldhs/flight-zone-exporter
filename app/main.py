@@ -11,7 +11,7 @@ from app.core.exceptions import (
     SPKNotFoundError,
     InvalidFileFormatError
 )
-from app.api.routes import health, arcgis, kml
+from app.api.routes import health, arcgis, kml, payments, subscriptions
 
 # Configure logging
 logging.basicConfig(
@@ -45,6 +45,8 @@ app.include_router(auth.router, prefix="/api/auth")
 app.include_router(health.router, prefix="/api")
 app.include_router(arcgis.router, prefix="/api/arcgis")
 app.include_router(kml.router, prefix="/api/kml")
+app.include_router(payments.router)
+app.include_router(subscriptions.router)
 
 
 # Global exception handlers

@@ -2,8 +2,10 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from app.models.user import UserCreate, UserLogin, UserResponse, User, Token
 from app.services.user_service import UserService
 from app.services.arcgis_service import ArcGISService
+from app.services.payment_service import PaymentService
 from app.core.security import create_access_token
 from app.core.dependencies import get_current_active_user
+from app.core.config import settings
 from app.models.user import UserInDB
 
 router = APIRouter()
@@ -20,6 +22,10 @@ async def register(user_create: UserCreate):
 
     Note: Credentials are validated against maps.sinarmasforestry.com ArcGIS server.
     You must use your EXISTING GIS Auth credentials from the ArcGIS portal.
+
+    **Payment Flow:**
+    - Whitelisted users (e.g., agasha123): Get immediate free access
+    - Other users: Must complete payment to activate subscription
     """
     try:
         # Validate GIS Auth credentials with ArcGIS server
@@ -34,8 +40,11 @@ async def register(user_create: UserCreate):
                 detail="Invalid GIS Auth credentials. Please use your existing credentials from maps.sinarmasforestry.com"
             )
 
+        # Check if user is whitelisted (free tier)
+        is_whitelisted = user_create.gis_auth_username in settings.FREE_TIER_USERS
+
         # Create user
-        user = UserService.create_user(user_create)
+        user = UserService.create_user(user_create, is_whitelisted=is_whitelisted)
 
         # Create access token
         access_token = create_access_token(data={"sub": user.id, "gis_auth_username": user.gis_auth_username})
@@ -46,13 +55,39 @@ async def register(user_create: UserCreate):
             gis_auth_username=user.gis_auth_username,
             full_name=user.full_name,
             is_active=user.is_active,
+            is_whitelisted=user.is_whitelisted,
+            subscription_status=user.subscription_status,
+            subscription_end_date=user.subscription_end_date,
+            plan_type=user.plan_type,
             created_at=user.created_at
+        )
+
+        # If whitelisted, return token immediately
+        if is_whitelisted:
+            return UserResponse(
+                user=user_response,
+                access_token=access_token,
+                token_type="bearer",
+                requires_payment=False
+            )
+
+        # If NOT whitelisted, create payment and return payment URL
+        payment_service = PaymentService()
+        payment = payment_service.create_payment(
+            user_id=user.id,
+            user_email=f"{user.gis_auth_username}@flightzone.local",
+            user_name=user.full_name
         )
 
         return UserResponse(
             user=user_response,
             access_token=access_token,
-            token_type="bearer"
+            token_type="bearer",
+            requires_payment=True,
+            payment_url=payment["payment_url"],
+            payment_id=payment["payment_id"],
+            amount=payment["amount"],
+            expires_at=payment["expires_at"]
         )
 
     except HTTPException:

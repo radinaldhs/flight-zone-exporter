@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from typing import Optional
-from app.models.user import UserCreate, UserInDB, User
+from app.models.user import UserCreate, UserInDB
 from app.core.security import get_password_hash, verify_password
 from app.core.firebase import get_firestore_client
 
@@ -29,6 +29,9 @@ class UserService:
                 if 'created_at' in user_data and hasattr(user_data['created_at'], 'seconds'):
                     user_data['created_at'] = datetime.fromtimestamp(user_data['created_at'].seconds)
 
+                if 'subscription_end_date' in user_data and user_data['subscription_end_date'] is not None and hasattr(user_data['subscription_end_date'], 'seconds'):
+                    user_data['subscription_end_date'] = datetime.fromtimestamp(user_data['subscription_end_date'].seconds)
+
                 return UserInDB(**user_data)
 
             return None
@@ -51,6 +54,9 @@ class UserService:
                 if 'created_at' in user_data and hasattr(user_data['created_at'], 'seconds'):
                     user_data['created_at'] = datetime.fromtimestamp(user_data['created_at'].seconds)
 
+                if 'subscription_end_date' in user_data and user_data['subscription_end_date'] is not None and hasattr(user_data['subscription_end_date'], 'seconds'):
+                    user_data['subscription_end_date'] = datetime.fromtimestamp(user_data['subscription_end_date'].seconds)
+
                 return UserInDB(**user_data)
 
             return None
@@ -59,8 +65,8 @@ class UserService:
             return None
 
     @staticmethod
-    def create_user(user_create: UserCreate) -> UserInDB:
-        """Create a new user."""
+    def create_user(user_create: UserCreate, is_whitelisted: bool = False) -> UserInDB:
+        """Create a new user with subscription fields."""
         # Check if user already exists
         if UserService.get_user_by_gis_auth_username(user_create.gis_auth_username):
             raise ValueError("User with this GIS Auth Username already exists")
@@ -72,6 +78,10 @@ class UserService:
             "full_name": user_create.full_name,
             "hashed_gis_auth_password": get_password_hash(user_create.gis_auth_password),
             "is_active": True,
+            "is_whitelisted": is_whitelisted,
+            "subscription_status": "active" if is_whitelisted else "inactive",
+            "subscription_end_date": None,
+            "plan_type": "free" if is_whitelisted else "monthly",
             "created_at": datetime.utcnow()
         }
 
