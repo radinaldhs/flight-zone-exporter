@@ -264,6 +264,53 @@ class ArcGISService:
             "features_added": len(adds)
         }
 
+    def query_dashboard(self, where: str, out_fields: str) -> List[Dict[str, Any]]:
+        token = self.get_token()
+        response = requests.get(
+            f"{settings.ARCGIS_DASHBOARD_URL}/query",
+            params={
+                'f': 'json',
+                'where': where,
+                'outFields': out_fields,
+                'returnDistinctValues': 'true',
+                'returnGeometry': 'false',
+                'spatialRel': 'esriSpatialRelIntersects',
+                'token': token
+            },
+            headers=self.token_headers
+        )
+        data = response.json()
+        if 'error' in data:
+            raise ArcGISUploadError(f"Dashboard query failed: {data['error'].get('message', str(data['error']))}")
+        return [f['attributes'] for f in data.get('features', [])]
+
+    def get_regions(self, vendor_code: str) -> List[str]:
+        where = f"VendorCode='{vendor_code}' AND Region<>'' AND Drone=0"
+        results = self.query_dashboard(where, 'Region')
+        return sorted(set(r['Region'] for r in results))
+
+    def get_districts(self, vendor_code: str, region: str) -> List[str]:
+        where = f"VendorCode='{vendor_code}' AND Region='{region}' AND District<>'' AND Drone=0"
+        results = self.query_dashboard(where, 'District')
+        return sorted(set(r['District'] for r in results))
+
+    def get_petaks(self, vendor_code: str, district: str) -> List[str]:
+        where = f"VendorCode='{vendor_code}' AND District='{district}' AND Drone=0"
+        results = self.query_dashboard(where, 'Petak')
+        return sorted(set(r['Petak'] for r in results))
+
+    def get_spk_numbers(self, vendor_code: str, petak: str) -> List[Dict[str, str]]:
+        where = f"VendorCode='{vendor_code}' AND Petak='{petak}' AND Drone=0"
+        results = self.query_dashboard(where, 'SPKNumber,Activity')
+        seen = set()
+        unique = []
+        for r in results:
+            key = (r['SPKNumber'], r['Activity'])
+            if key not in seen:
+                seen.add(key)
+                unique.append({'spk_number': r['SPKNumber'], 'activity': r['Activity']})
+        return sorted(unique, key=lambda x: x['spk_number'])
+
     def check_spk_exists(self, spk: str) -> Dict[str, Any]:
         oids = self.query_spk(spk)
         return {

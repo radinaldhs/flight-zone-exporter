@@ -38,6 +38,10 @@ class Settings(BaseSettings):
         "ARCGIS_REFERER",
         "https://maps.sinarmasforestry.com/UploadDroneManagements/"
     )
+    ARCGIS_DASHBOARD_URL: str = os.getenv(
+        "ARCGIS_DASHBOARD_URL",
+        "https://maps.sinarmasforestry.com/arcgis/rest/services/PreFo/DroneSprayingDashboard/MapServer/1"
+    )
 
     # ArcGIS Credentials
     GIS_AUTH_USERNAME: str = os.getenv("GIS_AUTH_USERNAME", "")

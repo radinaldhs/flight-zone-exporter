@@ -63,5 +63,18 @@ class HealthResponse(BaseModel):
     app_name: str
 
 
+class DashboardQueryResponse(BaseModel):
+    values: List[str]
+
+
+class SPKNumberItem(BaseModel):
+    spk_number: str
+    activity: str
+
+
+class SPKNumberQueryResponse(BaseModel):
+    values: List[SPKNumberItem]
+
+
 class ErrorResponse(BaseModel):
     detail: str
