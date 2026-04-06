@@ -181,6 +181,7 @@ class ArcGISService:
                     'filetype': 'shapefile',
                     'publishParameters': json.dumps({
                         'name': f'UploadedZone_{spk_number}',
+                        'targetSR': {'wkid': 4326},
                         'maxRecordCount': 1000,
                         'enforceInputFileSizeLimit': True,
                         'enforceOutputJsonSizeLimit': True,
