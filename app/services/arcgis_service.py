@@ -239,7 +239,7 @@ class ArcGISService:
                     "EndFlight": end_timestamp,
                     "ProcessedDate": int(time.time() * 1000),
                     "Height": 2.5,
-                    "Width": feat["attributes"].get("Route_Spac", 0),
+                    "Width": 5,
                     "Speed": 3.5,
                     "TaskArea": feat["attributes"].get("Task_Area", 0),
                     "SprayAmount": feat["attributes"].get("Spray_amou", 0),
