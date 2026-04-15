@@ -1,3 +1,5 @@
+import math
+from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse
 from pathlib import Path
@@ -146,7 +148,10 @@ async def download_final_upload():
 async def upload_to_arcgis(
     spk_number: str = Form(..., description="SPK number"),
     key_id: str = Form(..., description="Key ID"),
-    final_zip: UploadFile = File(None, description="Optional: final upload ZIP (if not using pre-generated)")
+    final_zip: UploadFile = File(None, description="Optional: final upload ZIP (if not using pre-generated)"),
+    height: Optional[float] = Form(None, description="Flight height (default: 2.5)"),
+    width: Optional[float] = Form(None, description="Spray width (default: 5)"),
+    speed: Optional[float] = Form(None, description="Flight speed (default: 3.5)"),
 ):
     work_dir = FileUtils.get_work_dir()
 
@@ -174,8 +179,19 @@ async def upload_to_arcgis(
         # Upload shapefile
         upload_result = arcgis_service.upload_shapefile(zip_path, spk_number)
 
-        # Apply edits
-        apply_result = arcgis_service.apply_edits(upload_result, spk_number, key_id)
+        # Validate and apply edits
+        for name, val in [("height", height), ("width", width), ("speed", speed)]:
+            if val is not None and (not math.isfinite(val) or val <= 0):
+                raise HTTPException(status_code=422, detail=f"Invalid {name}: must be a positive number")
+
+        edit_kwargs = {}
+        if height is not None:
+            edit_kwargs["height"] = height
+        if width is not None:
+            edit_kwargs["width"] = width
+        if speed is not None:
+            edit_kwargs["speed"] = speed
+        apply_result = arcgis_service.apply_edits(upload_result, spk_number, key_id, **edit_kwargs)
 
         return {
             "success": True,

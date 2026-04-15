@@ -197,7 +197,7 @@ class ArcGISService:
 
         return response.json()
 
-    def apply_edits(self, upload_response: Dict[str, Any], spk_number: str, key_id: str) -> Dict[str, Any]:
+    def apply_edits(self, upload_response: Dict[str, Any], spk_number: str, key_id: str, height: float = 2.5, width: float = 5, speed: float = 3.5) -> Dict[str, Any]:
         token = self.get_token()
         apply_url = f"{self.base_url}/applyEdits?token={token}"
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
@@ -238,9 +238,9 @@ class ArcGISService:
                     "StartFlight": start_timestamp,
                     "EndFlight": end_timestamp,
                     "ProcessedDate": int(time.time() * 1000),
-                    "Height": 2.5,
-                    "Width": 5,
-                    "Speed": 3.5,
+                    "Height": height,
+                    "Width": width,
+                    "Speed": speed,
                     "TaskArea": feat["attributes"].get("Task_Area", 0),
                     "SprayAmount": feat["attributes"].get("Spray_amou", 0),
                     "VendorName": "PT SENTRA AGASHA NUSANTARA",
