@@ -99,12 +99,6 @@ async def root():
     }
 
 
-# Serverless handler for Vercel/AWS Lambda
-from mangum import Mangum  # noqa: E402
-
-handler = Mangum(app)
-
-
 if __name__ == "__main__":
     import uvicorn
 

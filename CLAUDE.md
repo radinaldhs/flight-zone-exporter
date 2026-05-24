@@ -90,6 +90,8 @@ See `.env.example` for the full template.
 
 ## Deployment
 
-- **Render.com**: Python 3.11.9 (`render.yaml`)
-- **Docker**: Python 3.9-slim with GDAL system libraries (`Dockerfile`)
-- **Vercel/Lambda**: `Mangum` handler exposed as `app.main:handler`
+- **Render.com**: Python 3.11.9 (`render.yaml`). Production target.
+- **Docker**: Python 3.11-slim with GDAL system libraries (`Dockerfile`).
+
+Vercel/Lambda is **not** supported — geopandas + GDAL exceeds the 50 MB function
+size cap and KML processing exceeds the execution-time cap.

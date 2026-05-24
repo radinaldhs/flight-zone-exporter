@@ -4,7 +4,6 @@ uvicorn[standard]==0.34.0
 pydantic==2.10.6
 pydantic-settings==2.7.1
 python-multipart==0.0.20
-mangum==0.17.0
 
 # Authentication
 python-jose[cryptography]==3.3.0
