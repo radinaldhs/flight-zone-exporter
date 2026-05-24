@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, Field
 
 
 class UserBase(BaseModel):
@@ -28,6 +29,7 @@ class User(UserBase):
 
 class UserInDB(User):
     hashed_gis_auth_password: str
+    encrypted_gis_auth_password: str
 
 
 class Token(BaseModel):

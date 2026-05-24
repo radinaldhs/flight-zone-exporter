@@ -2,14 +2,10 @@
 
 A modern REST API built with FastAPI for processing drone flight KML files and uploading to ArcGIS Feature Server.
 
-## 🚀 Version 2.0 - FastAPI Migration
-
-This project has been refactored from Streamlit to **FastAPI** for better scalability, API-first design, and production readiness.
-
-### What's New in v2.0
+### Features
 
 - **REST API**: Full RESTful API with automatic OpenAPI documentation
-- **Better Architecture**: Separated business logic into service modules
+- **Service-Oriented Architecture**: Business logic separated into service modules
 - **Type Safety**: Pydantic models for request/response validation
 - **Production Ready**: Proper error handling, logging, and CORS support
 - **Stateless**: No session state, easier to scale and deploy
@@ -29,13 +25,20 @@ pip install -r requirements.txt
 
 ### Configuration
 
-Create a `.env` file:
+Copy `.env.example` to `.env` and fill in the required secrets:
+
 ```env
-GIS_AUTH_USERNAME=your_username
-GIS_AUTH_PASSWORD=your_password
-GIS_USERNAME=your_gis_username
-GIS_PASSWORD=your_gis_password
+SECRET_KEY=...        # python -c "import secrets; print(secrets.token_urlsafe(32))"
+ENCRYPTION_KEY=...    # python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+GIS_USERNAME=...      # shared ArcGIS editor account used for uploads
+GIS_PASSWORD=...
+FIREBASE_SERVICE_ACCOUNT_PATH=firebase-service-account.json
+CORS_ORIGINS=http://localhost:5173
 ```
+
+Each user provides their own Sinarmas portal credentials at registration (used for
+their per-request step-1 token); the shared editor account in `GIS_USERNAME`/`GIS_PASSWORD`
+is used for the actual upload write.
 
 ### Running the API
 
@@ -76,22 +79,6 @@ app/
 ├── models/                   # Pydantic schemas
 ├── services/                 # Business logic
 └── utils/                    # Utilities
-```
-
-## Migration from Streamlit
-
-The original Streamlit app is preserved in [runner.py](runner.py). The new FastAPI version offers:
-
-- **API-first design** for easy integration
-- **Better separation of concerns** with service modules
-- **Type safety** with Pydantic
-- **Production-ready** error handling and logging
-- **Scalable** stateless architecture
-
-To use the old Streamlit app:
-```bash
-pip install streamlit
-streamlit run runner.py
 ```
 
 ## License

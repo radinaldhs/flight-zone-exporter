@@ -8,9 +8,9 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.9"
-      - key: GIS_AUTH_USERNAME
+      - key: SECRET_KEY
         sync: false
-      - key: GIS_AUTH_PASSWORD
+      - key: ENCRYPTION_KEY
         sync: false
       - key: GIS_USERNAME
         sync: false
@@ -19,4 +19,4 @@ services:
       - key: FIREBASE_SERVICE_ACCOUNT_JSON
         sync: false
       - key: CORS_ORIGINS
-        value: "*"
+        value: "https://flight-zone-exporter-vue.vercel.app"

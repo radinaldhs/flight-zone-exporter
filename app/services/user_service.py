@@ -1,118 +1,109 @@
+import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
-from app.models.user import UserCreate, UserInDB, User
-from app.core.security import get_password_hash, verify_password
+
+from app.core.config import settings
+from app.core.encryption import decrypt, encrypt
 from app.core.firebase import get_firestore_client
+from app.core.security import get_password_hash, verify_password
+from app.models.user import UserCreate, UserInDB
+
+logger = logging.getLogger(__name__)
 
 
 class UserService:
     @staticmethod
     def _get_users_collection():
-        """Get Firestore users collection reference."""
         db = get_firestore_client()
-        return db.collection('users')
+        return db.collection("users")
+
+    @staticmethod
+    def _doc_to_user(doc) -> UserInDB:
+        user_data = doc.to_dict()
+        user_data["id"] = doc.id
+        created_at = user_data.get("created_at")
+        if created_at is not None and hasattr(created_at, "seconds"):
+            user_data["created_at"] = datetime.fromtimestamp(created_at.seconds, tz=timezone.utc)
+        return UserInDB(**user_data)
 
     @staticmethod
     def get_user_by_gis_auth_username(gis_auth_username: str) -> Optional[UserInDB]:
-        """Get user by GIS auth username."""
         try:
             users_ref = UserService._get_users_collection()
-            query = users_ref.where('gis_auth_username', '==', gis_auth_username).limit(1)
-            docs = query.stream()
-
+            docs = users_ref.where("gis_auth_username", "==", gis_auth_username).limit(1).stream()
             for doc in docs:
-                user_data = doc.to_dict()
-                user_data['id'] = doc.id
-
-                # Convert Firestore Timestamp to datetime if needed
-                if 'created_at' in user_data and hasattr(user_data['created_at'], 'seconds'):
-                    user_data['created_at'] = datetime.fromtimestamp(user_data['created_at'].seconds)
-
-                return UserInDB(**user_data)
-
+                return UserService._doc_to_user(doc)
             return None
-        except Exception as e:
-            print(f"Error getting user by username: {e}")
+        except Exception:
+            logger.exception("Error getting user by username")
             return None
 
     @staticmethod
     def get_user_by_id(user_id: str) -> Optional[UserInDB]:
-        """Get user by ID."""
         try:
-            users_ref = UserService._get_users_collection()
-            doc = users_ref.document(user_id).get()
-
+            doc = UserService._get_users_collection().document(user_id).get()
             if doc.exists:
-                user_data = doc.to_dict()
-                user_data['id'] = doc.id
-
-                # Convert Firestore Timestamp to datetime if needed
-                if 'created_at' in user_data and hasattr(user_data['created_at'], 'seconds'):
-                    user_data['created_at'] = datetime.fromtimestamp(user_data['created_at'].seconds)
-
-                return UserInDB(**user_data)
-
+                return UserService._doc_to_user(doc)
             return None
-        except Exception as e:
-            print(f"Error getting user by ID: {e}")
+        except Exception:
+            logger.exception("Error getting user by ID")
             return None
 
     @staticmethod
     def create_user(user_create: UserCreate) -> UserInDB:
-        """Create a new user."""
-        # Check if user already exists
         if UserService.get_user_by_gis_auth_username(user_create.gis_auth_username):
             raise ValueError("User with this GIS Auth Username already exists")
 
-        # Create new user
         user_id = str(uuid.uuid4())
+        created_at = datetime.now(timezone.utc)
         user_data = {
             "gis_auth_username": user_create.gis_auth_username,
             "full_name": user_create.full_name,
             "hashed_gis_auth_password": get_password_hash(user_create.gis_auth_password),
+            "encrypted_gis_auth_password": encrypt(user_create.gis_auth_password),
             "is_active": True,
-            "created_at": datetime.utcnow()
+            "created_at": created_at,
         }
 
         try:
-            # Store in Firestore
-            users_ref = UserService._get_users_collection()
-            users_ref.document(user_id).set(user_data)
-
-            # Return UserInDB object
-            user_data['id'] = user_id
-            user_data['created_at'] = user_data['created_at'].isoformat()
-            return UserInDB(**user_data)
+            UserService._get_users_collection().document(user_id).set(user_data)
         except Exception as e:
-            print(f"Error creating user: {e}")
-            raise ValueError(f"Failed to create user: {str(e)}")
+            logger.exception("Error creating user")
+            raise ValueError(f"Failed to create user: {e}") from e
+
+        return UserInDB(id=user_id, **user_data)
 
     @staticmethod
     def authenticate_user(gis_auth_username: str, gis_auth_password: str) -> Optional[UserInDB]:
-        """Authenticate user with GIS auth credentials."""
         user = UserService.get_user_by_gis_auth_username(gis_auth_username)
-
         if not user:
             return None
-
         if not verify_password(gis_auth_password, user.hashed_gis_auth_password):
             return None
-
         return user
 
     @staticmethod
     def get_user_gis_credentials(user_id: str) -> Optional[dict]:
-        """Get shared GIS credentials for ArcGIS operations from environment variables."""
-        from app.core.config import settings
+        """
+        Return the credential bundle for ArcGIS calls:
+          - per-user auth creds, decrypted from Firestore (step-1 token)
+          - shared editor creds from settings (step-3 token)
+        Returns None if the user is missing or stored ciphertext can't be decrypted.
+        """
         user = UserService.get_user_by_id(user_id)
-
         if not user:
             return None
 
-        # Return ONLY shared credentials from .env for ArcGIS operations
-        # User's GIS_AUTH credentials are only for app authentication, NOT for ArcGIS
+        try:
+            auth_password = decrypt(user.encrypted_gis_auth_password)
+        except ValueError:
+            logger.exception("Failed to decrypt auth password for user %s", user_id)
+            return None
+
         return {
-            "GIS_USERNAME": settings.GIS_USERNAME,  # fmiseditor from .env
-            "GIS_PASSWORD": settings.GIS_PASSWORD   # 987!@#EditorPass!@#321 from .env
+            "GIS_AUTH_USERNAME": user.gis_auth_username,
+            "GIS_AUTH_PASSWORD": auth_password,
+            "GIS_USERNAME": settings.GIS_USERNAME,
+            "GIS_PASSWORD": settings.GIS_PASSWORD,
         }

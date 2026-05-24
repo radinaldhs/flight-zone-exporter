@@ -1,78 +1,60 @@
-from fastapi import APIRouter, HTTPException, status, Depends
-from app.models.user import UserCreate, UserLogin, UserResponse, User, Token
-from app.services.user_service import UserService
-from app.services.arcgis_service import ArcGISService
-from app.core.security import create_access_token
+from fastapi import APIRouter, Depends, HTTPException, status
+
 from app.core.dependencies import get_current_active_user
-from app.models.user import UserInDB
+from app.core.security import create_access_token
+from app.models.user import User, UserCreate, UserInDB, UserLogin, UserResponse
+from app.services.arcgis_service import ArcGISService
+from app.services.user_service import UserService
 
 router = APIRouter()
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED, tags=["Authentication"])
+def _public_user(user: UserInDB) -> User:
+    return User(
+        id=user.id,
+        gis_auth_username=user.gis_auth_username,
+        full_name=user.full_name,
+        is_active=user.is_active,
+        created_at=user.created_at,
+    )
+
+
+@router.post(
+    "/register",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Authentication"],
+)
 async def register(user_create: UserCreate):
     """
-    Register a new user with GIS Auth credentials.
+    Register with your Sinarmas ArcGIS portal credentials.
 
-    - **gis_auth_username**: ArcGIS auth username (used for login and ArcGIS operations)
-    - **gis_auth_password**: ArcGIS auth password (used for login and ArcGIS operations)
-    - **full_name**: Optional full name
-
-    Note: Credentials are validated against maps.sinarmasforestry.com ArcGIS server.
-    You must use your EXISTING GIS Auth credentials from the ArcGIS portal.
+    Credentials are validated against maps.sinarmasforestry.com before the account is
+    created. The password is bcrypt-hashed for login and Fernet-encrypted so it can be
+    replayed to the ArcGIS portal for step-1 token exchange.
     """
-    try:
-        # Validate GIS Auth credentials with ArcGIS server
-        is_valid = ArcGISService.validate_gis_auth_credentials(
-            user_create.gis_auth_username,
-            user_create.gis_auth_password
-        )
-
-        if not is_valid:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid GIS Auth credentials. Please use your existing credentials from maps.sinarmasforestry.com"
-            )
-
-        # Create user
-        user = UserService.create_user(user_create)
-
-        # Create access token
-        access_token = create_access_token(data={"sub": user.id, "gis_auth_username": user.gis_auth_username})
-
-        # Return user without sensitive data
-        user_response = User(
-            id=user.id,
-            gis_auth_username=user.gis_auth_username,
-            full_name=user.full_name,
-            is_active=user.is_active,
-            created_at=user.created_at
-        )
-
-        return UserResponse(
-            user=user_response,
-            access_token=access_token,
-            token_type="bearer"
-        )
-
-    except HTTPException:
-        raise
-    except ValueError as e:
+    if not ArcGISService.validate_gis_credentials(
+        user_create.gis_auth_username, user_create.gis_auth_password
+    ):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid GIS Auth credentials (portal login).",
         )
+
+    try:
+        user = UserService.create_user(user_create)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    access_token = create_access_token(
+        data={"sub": user.id, "gis_auth_username": user.gis_auth_username}
+    )
+    return UserResponse(user=_public_user(user), access_token=access_token, token_type="bearer")
 
 
 @router.post("/login", response_model=UserResponse, tags=["Authentication"])
 async def login(user_login: UserLogin):
-    """
-    Login with GIS Auth username and password.
-
-    Returns access token and user information.
-    """
     user = UserService.authenticate_user(user_login.gis_auth_username, user_login.gis_auth_password)
-
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -80,34 +62,12 @@ async def login(user_login: UserLogin):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Create access token
-    access_token = create_access_token(data={"sub": user.id, "gis_auth_username": user.gis_auth_username})
-
-    # Return user without sensitive data
-    user_response = User(
-        id=user.id,
-        gis_auth_username=user.gis_auth_username,
-        full_name=user.full_name,
-        is_active=user.is_active,
-        created_at=user.created_at
+    access_token = create_access_token(
+        data={"sub": user.id, "gis_auth_username": user.gis_auth_username}
     )
-
-    return UserResponse(
-        user=user_response,
-        access_token=access_token,
-        token_type="bearer"
-    )
+    return UserResponse(user=_public_user(user), access_token=access_token, token_type="bearer")
 
 
 @router.get("/me", response_model=User, tags=["Authentication"])
 async def get_current_user_info(current_user: UserInDB = Depends(get_current_active_user)):
-    """
-    Get current authenticated user information.
-    """
-    return User(
-        id=current_user.id,
-        gis_auth_username=current_user.gis_auth_username,
-        full_name=current_user.full_name,
-        is_active=current_user.is_active,
-        created_at=current_user.created_at
-    )
+    return _public_user(current_user)
