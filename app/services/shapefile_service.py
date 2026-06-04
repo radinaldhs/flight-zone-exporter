@@ -4,13 +4,37 @@ from pathlib import Path
 from typing import Optional
 import pandas as pd
 import geopandas as gpd
-from openpyxl import load_workbook
 
 from app.core.config import settings
 from app.core.exceptions import FileProcessingError
 
 
+def _normalize_header(value) -> str:
+    """Trim, collapse internal whitespace, and casefold a header for tolerant matching."""
+    return " ".join(str(value).split()).casefold() if value is not None else ""
+
+
 class ShapefileService:
+    @staticmethod
+    def _resolve_column(normalized_map: dict, label: str, *, exact: str = None, prefix: str = None) -> str:
+        """Return the real df column whose normalized header matches `exact` or starts with `prefix`.
+
+        Raises FileProcessingError listing the actual columns if none match.
+        """
+        if exact is not None:
+            match = normalized_map.get(exact)
+            if match is not None:
+                return match
+        if prefix is not None:
+            candidates = [k for k in normalized_map if k.startswith(prefix)]
+            if candidates:
+                return normalized_map[min(candidates, key=len)]
+
+        raise FileProcessingError(
+            f"Flight record is missing the required '{label}' column. "
+            f"Found columns: {list(normalized_map.values())}"
+        )
+
     @staticmethod
     def create_shapefile_for_edit(gdf: gpd.GeoDataFrame, spk_number: str, work_dir: Path) -> Path:
         try:
@@ -31,51 +55,50 @@ class ShapefileService:
             raise FileProcessingError(f"Shapefile creation failed: {str(e)}")
 
     @staticmethod
-    def process_excel(excel_path: Path, merged_gdf: gpd.GeoDataFrame, spk_number: str, key_id: str) -> pd.DataFrame:
+    def process_excel(excel_path: Path, merged_gdf: gpd.GeoDataFrame, spk_number: str, key_id: str) -> tuple:
         try:
-            # Load and modify Excel
-            wb = load_workbook(excel_path)
-            sheet = wb['flight record']
-
-            # Copy column L to column A (insert at beginning)
-            orig = [c.value for c in sheet['L']]
-            sheet.insert_cols(1)
-            for i, v in enumerate(orig, start=1):
-                sheet.cell(row=i, column=1).value = v
-
-            wb.save(excel_path)
-
-            # Read modified Excel
             df_flight = pd.read_excel(excel_path, sheet_name='flight record', engine='openpyxl')
+            normalized_map = {_normalize_header(c): c for c in df_flight.columns}
 
-            # Filter merged GDF to only zones present in flight record
-            serial_col = df_flight.columns[0]
+            serial_col = ShapefileService._resolve_column(normalized_map, 'Serial Number', exact='serial number')
+            flight_time_col = ShapefileService._resolve_column(normalized_map, 'Flight time', exact='flight time')
+            total_amount_col = ShapefileService._resolve_column(
+                normalized_map, 'Total Amount(L/Kg)', prefix='total amount'
+            )
+
             merged_filtered = merged_gdf[
                 merged_gdf['Name'].astype(str).isin(df_flight[serial_col].astype(str))
             ].reset_index(drop=True)
 
-            # Build summary DataFrame
+            if merged_filtered.empty:
+                raise FileProcessingError(
+                    f"No flight zones matched the '{serial_col}' values in the flight record. "
+                    f"Check that the Excel serial numbers correspond to the KML placemark names "
+                    f"(e.g. the KML uses names like 'R2543821792')."
+                )
+
             df_summary = pd.DataFrame({'Name': merged_filtered['Name']})
 
-            def lookup(s, idx):
-                sub = df_flight[df_flight[df_flight.columns[0]] == s]
-                return sub.iloc[0, idx] if not sub.empty else None
+            def lookup(serial, column):
+                sub = df_flight[df_flight[serial_col].astype(str) == str(serial)]
+                return sub.iloc[0][column] if not sub.empty else None
 
-            df_summary['TaskAmount'] = df_summary['Name'].map(lambda s: (lookup(s, 6) or 0) * 1000)
-            df_summary['StarFlight'] = df_summary['Name'].map(lambda s: str(lookup(s, 1) or '')[:19])
+            df_summary['TaskAmount'] = df_summary['Name'].map(lambda s: (lookup(s, total_amount_col) or 0) * 1000)
+            df_summary['StarFlight'] = df_summary['Name'].map(lambda s: str(lookup(s, flight_time_col) or '')[:19])
             df_summary['EndFlight'] = df_summary['Name'].map(
-                lambda s: (lambda v: str(v)[:11] + str(v)[-8:])(lookup(s, 1))
+                lambda s: (lambda v: str(v)[:11] + str(v)[-8:])(lookup(s, flight_time_col))
             )
             df_summary['Capacity'] = 25
             df_summary['SPKNumber'] = spk_number
             df_summary['KeyID'] = key_id
 
-            # Write back to Excel
             with pd.ExcelWriter(excel_path, engine='openpyxl', mode='a', if_sheet_exists='replace') as w:
                 df_summary.to_excel(w, sheet_name='Sheet1', index=False)
 
             return merged_filtered, df_summary
 
+        except FileProcessingError:
+            raise
         except Exception as e:
             raise FileProcessingError(f"Excel processing failed: {str(e)}")
 

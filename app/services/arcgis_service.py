@@ -54,6 +54,20 @@ class ArcGISService:
         }
 
     @staticmethod
+    def _raise_on_error(data: dict, action: str) -> None:
+        """Raise ArcGISUploadError if an ArcGIS JSON body carries an error object (HTTP 200 can still be a failure)."""
+        err = data.get("error")
+        if err:
+            if isinstance(err, dict):
+                message = err.get("message") or str(err)
+                details = err.get("details")
+                if details:
+                    message = f"{message}: {'; '.join(str(d) for d in details)}"
+            else:
+                message = str(err)
+            raise ArcGISUploadError(f"{action} failed: {message}")
+
+    @staticmethod
     def validate_gis_credentials(username: str, password: str) -> bool:
         """Validate a single credential pair against the ArcGIS portal."""
         try:
@@ -224,7 +238,50 @@ class ArcGISService:
 
         if not response.ok:
             raise ArcGISUploadError(f"Upload failed: {response.status_code} {response.text}")
-        return response.json()
+
+        data = response.json()
+        self._raise_on_error(data, "Shapefile upload")
+        layers = data.get("featureCollection", {}).get("layers", [])
+        features = layers[0].get("featureSet", {}).get("features", []) if layers else []
+        if not features:
+            raise ArcGISUploadError(
+                f"Shapefile upload produced 0 features for SPK {spk_number}. "
+                f"The shapefile is empty — verify the flight record matches the KML zones."
+            )
+        return data
+
+    @staticmethod
+    def _parse_flight_timestamps(attrs: Dict[str, Any], default_ms: int) -> Tuple[int, int]:
+        """Parse StarFlight/EndFlight strings to epoch ms, falling back to default_ms when absent or malformed."""
+        timestamps = {"StarFlight": default_ms, "EndFlight": default_ms}
+        for field in timestamps:
+            raw = attrs.get(field, "")
+            if not raw:
+                continue
+            try:
+                timestamps[field] = int(
+                    datetime.datetime.strptime(raw, "%Y-%m-%d %H:%M:%S").timestamp() * 1000
+                )
+            except ValueError:
+                pass
+        return timestamps["StarFlight"], timestamps["EndFlight"]
+
+    @staticmethod
+    def _describe_add_error(result: Dict[str, Any]) -> str:
+        """Best-effort human reason for a failed addResult, tolerant of dict/str/None error shapes."""
+        err = result.get("error")
+        if isinstance(err, dict):
+            return err.get("description") or str(err)
+        return str(err) if err else "unknown"
+
+    @staticmethod
+    def _check_add_results(add_results: List[Dict[str, Any]]) -> int:
+        """Raise ArcGISUploadError if any per-feature add failed; otherwise return the inserted count."""
+        failed = [r for r in add_results if not r.get("success")]
+        if failed:
+            reasons = "; ".join(ArcGISService._describe_add_error(r) for r in failed)
+            raise ArcGISUploadError(f"Apply edits failed for {len(failed)} feature(s): {reasons}")
+        return sum(1 for r in add_results if r.get("success"))
 
     def apply_edits(
         self,
@@ -236,32 +293,14 @@ class ArcGISService:
         speed: float = 3.5,
     ) -> Dict[str, Any]:
         token = self.get_token()
-        features = (
-            upload_response.get("featureCollection", {})
-            .get("layers", [])[0]
-            .get("featureSet", {})
-            .get("features", [])
-        )
+        layers = upload_response.get("featureCollection", {}).get("layers", [])
+        features = layers[0].get("featureSet", {}).get("features", []) if layers else []
 
         now_ms = int(time.time() * 1000)
         adds = []
         for feat in features:
             attrs = feat.get("attributes", {})
-            start_ts = end_ts = now_ms
-
-            for field, target in (("StarFlight", "start"), ("EndFlight", "end")):
-                raw = attrs.get(field, "")
-                if raw:
-                    try:
-                        parsed = int(
-                            datetime.datetime.strptime(raw, "%Y-%m-%d %H:%M:%S").timestamp() * 1000
-                        )
-                        if target == "start":
-                            start_ts = parsed
-                        else:
-                            end_ts = parsed
-                    except ValueError:
-                        pass
+            start_ts, end_ts = self._parse_flight_timestamps(attrs, now_ms)
 
             adds.append({
                 "aggregateGeometries": None,
@@ -287,6 +326,9 @@ class ArcGISService:
                 },
             })
 
+        if not adds:
+            raise ArcGISUploadError(f"No features to upload for SPK {spk_number}; nothing was applied.")
+
         response = requests.post(
             f"{self.base_url}/applyEdits?token={token}",
             data={"f": "json", "adds": json.dumps(adds)},
@@ -297,10 +339,18 @@ class ArcGISService:
         if not response.ok:
             raise ArcGISUploadError(f"Apply edits failed: {response.status_code}")
 
+        data = response.json()
+        self._raise_on_error(data, "Apply edits")
+        inserted = self._check_add_results(data.get("addResults", []))
+        if not inserted:
+            raise ArcGISUploadError(
+                f"Apply edits inserted 0 of {len(adds)} feature(s) for SPK {spk_number}; "
+                f"ArcGIS returned no successful results."
+            )
         return {
             "success": True,
-            "response": response.json(),
-            "features_added": len(adds),
+            "response": data,
+            "features_added": inserted,
         }
 
     def query_dashboard(self, where: str, out_fields: str) -> List[Dict[str, Any]]:
@@ -320,10 +370,7 @@ class ArcGISService:
             timeout=30,
         )
         data = response.json()
-        if "error" in data:
-            raise ArcGISUploadError(
-                f"Dashboard query failed: {data['error'].get('message', str(data['error']))}"
-            )
+        self._raise_on_error(data, "Dashboard query")
         return [f["attributes"] for f in data.get("features", [])]
 
     def get_regions(self, vendor_code: str) -> List[str]:

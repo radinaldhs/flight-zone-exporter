@@ -121,12 +121,11 @@ async def upload_to_arcgis(
         arcgis_service = ArcGISService(gis_credentials)
 
         check_result = arcgis_service.check_spk_exists(spk_number)
+        upload_result = arcgis_service.upload_shapefile(zip_path, spk_number)
         if check_result["exists"]:
             delete_result = arcgis_service.delete_spk(spk_number)
         else:
             delete_result = {"message": "No existing data to delete"}
-
-        upload_result = arcgis_service.upload_shapefile(zip_path, spk_number)
 
         edit_kwargs = {}
         if height is not None:
