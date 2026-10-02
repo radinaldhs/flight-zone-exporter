@@ -102,9 +102,9 @@ async def upload_to_arcgis(
     final_zip: UploadFile = File(..., description="Final upload ZIP"),
     spk_number: str = Form(..., description="SPK number"),
     key_id: str = Form(..., description="Key ID"),
-    height: Optional[float] = Form(None, description="Flight height (default: 2.5)"),
-    width: Optional[float] = Form(None, description="Spray width (default: 5)"),
-    speed: Optional[float] = Form(None, description="Flight speed (default: 3.5)"),
+    height: Optional[float] = Form(None, description="Flight height (default: from the flight data)"),
+    width: Optional[float] = Form(None, description="Spray width (default: from the flight data)"),
+    speed: Optional[float] = Form(None, description="Flight speed (default: from the flight data)"),
     gis_credentials: dict = Depends(get_user_gis_credentials),
 ):
     # Validate inputs BEFORE any destructive ArcGIS calls
