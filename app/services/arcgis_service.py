@@ -283,14 +283,23 @@ class ArcGISService:
             raise ArcGISUploadError(f"Apply edits failed for {len(failed)} feature(s): {reasons}")
         return sum(1 for r in add_results if r.get("success"))
 
+    @staticmethod
+    def _flight_value(override: Optional[float], attrs: Dict[str, Any], column: str, flight_name: Any) -> float:
+        if override is not None:
+            return override
+        value = attrs.get(column)
+        if value is None:
+            raise ArcGISUploadError(f"Flight {flight_name} has no '{column}' value in the uploaded shapefile.")
+        return value
+
     def apply_edits(
         self,
         upload_response: Dict[str, Any],
         spk_number: str,
         key_id: str,
-        height: float = 2.5,
-        width: float = 5,
-        speed: float = 3.5,
+        height: Optional[float] = None,
+        width: Optional[float] = None,
+        speed: Optional[float] = None,
     ) -> Dict[str, Any]:
         token = self.get_token()
         layers = upload_response.get("featureCollection", {}).get("layers", [])
@@ -301,6 +310,10 @@ class ArcGISService:
         for feat in features:
             attrs = feat.get("attributes", {})
             start_ts, end_ts = self._parse_flight_timestamps(attrs, now_ms)
+            flight_name = attrs.get("Name")
+            flight_height = self._flight_value(height, attrs, "Height", flight_name)
+            flight_width = self._flight_value(width, attrs, "Route_Spac", flight_name)
+            flight_speed = self._flight_value(speed, attrs, "Task_Fligh", flight_name)
 
             adds.append({
                 "aggregateGeometries": None,
@@ -315,11 +328,11 @@ class ArcGISService:
                     "StartFlight": start_ts,
                     "EndFlight": end_ts,
                     "ProcessedDate": now_ms,
-                    "Height": height,
-                    "Width": width,
-                    "Speed": speed,
-                    "TaskArea": attrs.get("Task_Area", 0),
-                    "SprayAmount": attrs.get("Spray_amou", 0),
+                    "Height": flight_height,
+                    "Width": flight_width,
+                    "Speed": flight_speed,
+                    "TaskArea": self._flight_value(None, attrs, "Task_Area", flight_name),
+                    "SprayAmount": self._flight_value(None, attrs, "Spray_amou", flight_name),
                     "VendorName": "PT SENTRA AGASHA NUSANTARA",
                     "UserID": self._creds["GIS_AUTH_USERNAME"],
                     "CRT_Date": now_ms,

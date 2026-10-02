@@ -18,6 +18,8 @@ VALID_CREDS = {
     "GIS_PASSWORD": "editor_pass",
 }
 
+FLIGHT_VALUES = {"Height": 50, "Route_Spac": 6, "Task_Fligh": 7, "Task_Area": 100, "Spray_amou": 15}
+
 ONE_FEATURE_UPLOAD = {
     "featureCollection": {
         "layers": [{
@@ -27,6 +29,7 @@ ONE_FEATURE_UPLOAD = {
                     "attributes": {
                         "Name": "R1",
                         "Flight_Con": "D1",
+                        **FLIGHT_VALUES,
                     },
                 }]
             }
@@ -41,11 +44,11 @@ TWO_FEATURE_UPLOAD = {
                 "features": [
                     {
                         "geometry": {"paths": [[[0, 0], [1, 1]]]},
-                        "attributes": {"Name": "R1", "Flight_Con": "D1"},
+                        "attributes": {"Name": "R1", "Flight_Con": "D1", **FLIGHT_VALUES},
                     },
                     {
                         "geometry": {"paths": [[[2, 2], [3, 3]]]},
-                        "attributes": {"Name": "R2", "Flight_Con": "D2"},
+                        "attributes": {"Name": "R2", "Flight_Con": "D2", **FLIGHT_VALUES},
                     },
                 ]
             }
@@ -217,6 +220,43 @@ def test_apply_edits_reports_true_inserted_count(mocker):
     result = svc.apply_edits(TWO_FEATURE_UPLOAD, "SPK001", "KEY001")
 
     assert result["features_added"] == 2
+
+
+@pytest.mark.unit
+def test_apply_edits_uses_flight_values_from_shapefile(mocker):
+    svc = _make_service(mocker)
+    post = mocker.patch("requests.post", return_value=FakeResponse({"addResults": [{"objectId": 1, "success": True}]}))
+
+    svc.apply_edits(ONE_FEATURE_UPLOAD, "SPK001", "KEY001")
+
+    attrs = json.loads(post.call_args.kwargs["data"]["adds"])[0]["attributes"]
+    assert (attrs["Height"], attrs["Width"], attrs["Speed"]) == (50, 6, 7)
+    assert (attrs["TaskArea"], attrs["SprayAmount"]) == (100, 15)
+
+
+@pytest.mark.unit
+def test_apply_edits_override_wins_over_shapefile(mocker):
+    svc = _make_service(mocker)
+    post = mocker.patch("requests.post", return_value=FakeResponse({"addResults": [{"objectId": 1, "success": True}]}))
+
+    svc.apply_edits(ONE_FEATURE_UPLOAD, "SPK001", "KEY001", height=4.0, width=8.0, speed=5.5)
+
+    attrs = json.loads(post.call_args.kwargs["data"]["adds"])[0]["attributes"]
+    assert (attrs["Height"], attrs["Width"], attrs["Speed"]) == (4.0, 8.0, 5.5)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("missing", ["Height", "Route_Spac", "Task_Fligh", "Task_Area", "Spray_amou"])
+def test_apply_edits_raises_when_flight_value_missing(mocker, missing):
+    svc = _make_service(mocker)
+    post = mocker.patch("requests.post")
+    attrs = {"Name": "R1", **{k: v for k, v in FLIGHT_VALUES.items() if k != missing}}
+    upload = {"featureCollection": {"layers": [{"featureSet": {"features": [{"geometry": {}, "attributes": attrs}]}}]}}
+
+    with pytest.raises(ArcGISUploadError, match=missing):
+        svc.apply_edits(upload, "SPK001", "KEY001")
+
+    post.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

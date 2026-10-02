@@ -117,7 +117,7 @@ class TestUploadToArcGISParams:
 
     # ------------------------------------------------------------------
     # Omitted params: apply_edits called WITHOUT the key so its own
-    # defaults (height=2.5, width=5, speed=3.5) take effect.
+    # the per-flight values from the shapefile are used.
     # ------------------------------------------------------------------
 
     def test_omitted_height_not_in_apply_edits_kwargs(self, client, mocker):
@@ -146,31 +146,3 @@ class TestUploadToArcGISParams:
 
         _, kwargs = apply.call_args
         assert "speed" not in kwargs
-
-    # ------------------------------------------------------------------
-    # apply_edits signature: defaults used when kwargs are not supplied
-    # ------------------------------------------------------------------
-
-    def test_apply_edits_default_height(self):
-        from app.services.arcgis_service import ArcGISService
-
-        service = ArcGISService.__new__(ArcGISService)
-        import inspect
-        sig = inspect.signature(service.apply_edits)
-        assert sig.parameters["height"].default == 2.5
-
-    def test_apply_edits_default_width(self):
-        from app.services.arcgis_service import ArcGISService
-
-        service = ArcGISService.__new__(ArcGISService)
-        import inspect
-        sig = inspect.signature(service.apply_edits)
-        assert sig.parameters["width"].default == 5
-
-    def test_apply_edits_default_speed(self):
-        from app.services.arcgis_service import ArcGISService
-
-        service = ArcGISService.__new__(ArcGISService)
-        import inspect
-        sig = inspect.signature(service.apply_edits)
-        assert sig.parameters["speed"].default == 3.5
